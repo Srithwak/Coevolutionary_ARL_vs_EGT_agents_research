@@ -1,0 +1,39 @@
+1. Problem Definition (Week 1)
+
+Think of it as a simulation to see if one smart AI "mutant" can invade and out-compete a large population of dumb, predictable "bots."
+
+Frame your question: Can a self-learning “mutant” (ARL agent) outperform a population of fixed-strategy EGT agents in a simulated market?
+
+Identify metrics: average profit, invasion rate, equilibrium shift.
+
+2. Literature & Theory (Week 2)
+
+Summarize key ideas from evolutionary game theory and adaptive/adversarial RL.
+
+Reference 3–5 IEEE/ACM papers.
+
+3. Simulation Setup (Weeks 3–4)
+
+Build a simple EGT market environment (e.g., agents trade or bid using strategies like “cooperate,” “compete,” “random”).
+
+Use Python + Gymnasium or PettingZoo for multi-agent simulation.
+
+4. Design the ARL “Mutant” (Weeks 5–6)
+
+Train an adaptive RL agent (e.g., PPO, DQN) to exploit incumbents.
+
+Introduce it into the market at a small frequency (ε ≈ 0.05).
+
+5. Experiment & Results (Weeks 7–8)
+
+Run repeated simulations to track the mutant’s fitness (average payoff over time).
+
+Plot invasion curves, equilibrium outcomes.
+
+6. Paper & Presentation (Weeks 9–10)
+
+Write a 3–4 page IEEE paper:
+
+Intro → Related Work → Method → Implementation → Results → Conclusion.
+
+Prepare slides and demo software for the final presentation.
