@@ -128,12 +128,82 @@ class ARLAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-# --- 4. Main Simulation ---
+# --- 4. Plotting Function ---
+
+def plot_results(arl_payoff_history, egt_payoff_history, population_composition_history, payoff_gap_history, num_egt_agents):
+    """
+    Generates and saves the payoff, population, and gap plots.
+    """
+    
+    # --- Plot 1: Payoff Comparison ---
+    plt.figure(figsize=(12, 7))
+    plt.plot(arl_payoff_history, label="ARL 'Mutant' Agent Avg. Payoff", color='blue', linewidth=2)
+    plt.plot(egt_payoff_history, label="EGT Population Avg. Payoff", color='red', linestyle='--', linewidth=2)
+    plt.title("ARL 'Mutant' vs. Evolving EGT Population (Payoff per Generation)")
+    plt.xlabel("Generation")
+    plt.ylabel("Average Payoff per Generation")
+    plt.legend()
+    plt.grid(True, linestyle=':', alpha=0.7)
+    plt.tight_layout()
+    
+    plot1_filename = "arl_vs_egt_payoff.png"
+    plt.savefig(plot1_filename)
+    print(f"\nPayoff plot saved as '{plot1_filename}'")
+    plt.close() # Use close() to free memory without showing the plot
+
+    # --- Plot 2: Population Dynamics ---
+    pop_df = pd.DataFrame(population_composition_history).fillna(0)
+    # Ensure all strategies are columns, even if one dies out
+    for strategy in STRATEGIES:
+        if strategy not in pop_df.columns:
+            pop_df[strategy] = 0
+    pop_df = pop_df[STRATEGIES] # Re-order columns for consistency
+    
+    plt.figure(figsize=(12, 7))
+    # Create stacked area plot
+    plt.stackplot(pop_df.index, 
+                  [pop_df[strategy] for strategy in STRATEGIES], 
+                  labels=STRATEGIES,
+                  alpha=0.8)
+    
+    plt.title("EGT Population Dynamics Over Generations")
+    plt.xlabel("Generation")
+    plt.ylabel(f"Number of Agents (out of {num_egt_agents})")
+    plt.legend(loc='upper left')
+    plt.grid(True, linestyle=':', alpha=0.7)
+    plt.tight_layout()
+
+    plot2_filename = "arl_vs_egt_population.png"
+    plt.savefig(plot2_filename)
+    print(f"Population plot saved as '{plot2_filename}'")
+    plt.close()
+
+    # --- Plot 3: The "Exploitation Gap" ---
+    plt.figure(figsize=(12, 5))
+    plt.plot(payoff_gap_history, label="Payoff Gap (ARL - EGT)", color='green', linewidth=2)
+    
+    # Add a 'zero' line for reference
+    plt.axhline(0, color='black', linestyle='--', linewidth=1.0, label="No Difference (0.0)")
+    
+    plt.title("Exploitation Gap (ARL Agent vs. EGT Population)")
+    plt.xlabel("Generation")
+    plt.ylabel("Payoff Difference (ARL Payoff - EGT Payoff)")
+    plt.legend()
+    plt.grid(True, linestyle=':', alpha=0.7)
+    plt.tight_layout()
+    
+    plot3_filename = "arl_vs_egt_gap.png"
+    plt.savefig(plot3_filename)
+    print(f"Exploitation gap plot saved as '{plot3_filename}'")
+    plt.close()
+
+# --- 5. Main Simulation ---
 
 def run_simulation(num_generations=100, 
                    rounds_per_generation=1000, 
                    num_egt_agents=100, 
-                   mutation_rate=0.2): # <-- CHANGED: Increased mutation rate
+                   mutation_rate=0.1,
+                   evolve_population=True): # Flag to control evolution
     
     # --- Initialization ---
     
@@ -152,9 +222,9 @@ def run_simulation(num_generations=100,
     population_composition_history = []
     
     print(f"Starting simulation...")
-    print(f"ARL Agent (Mutant) vs. Evolving Population of {num_egt_agents} EGT Agents.")
+    print(f"ARL Agent vs. Population of {num_egt_agents} EGT Agents.")
     print(f"{num_generations} generations, {rounds_per_generation} rounds per generation.")
-    print(f"Mutation Rate: {mutation_rate}")
+    print(f"Evolution Enabled: {evolve_population}, Mutation Rate: {mutation_rate}")
     print("-" * 30)
 
     # --- Generation Loop (Outer Loop) ---
@@ -218,34 +288,35 @@ def run_simulation(num_generations=100,
         arl_payoff_history.append(arl_avg)
         egt_payoff_history.append(egt_avg)
 
-        # 2. Create the next generation using tournament selection
-        new_population = []
-        for _ in range(num_egt_agents):
-            
-            # Check for mutation
-            if random.random() < mutation_rate:
-                new_population.append(EGTAgent(strategy=random.choice(STRATEGIES)))
-            
-            # Tournament Selection
-            else:
-                # Pick two random "parents"
-                p1_idx = random.randint(0, num_egt_agents - 1)
-                p2_idx = random.randint(0, num_egt_agents - 1)
+        # 2. Conditionally create the next generation
+        if evolve_population:
+            new_population = []
+            for _ in range(num_egt_agents):
                 
-                # Get their fitness (payoff)
-                p1_fitness = egt_payoffs_this_generation[p1_idx]
-                p2_fitness = egt_payoffs_this_generation[p2_idx]
+                # Check for mutation
+                if random.random() < mutation_rate:
+                    new_population.append(EGTAgent(strategy=random.choice(STRATEGIES)))
                 
-                # The winner (with higher fitness) reproduces
-                if p1_fitness > p2_fitness:
-                    winner_strategy = population[p1_idx].strategy
+                # Tournament Selection
                 else:
-                    winner_strategy = population[p2_idx].strategy
+                    # Pick two random "parents"
+                    p1_idx = random.randint(0, num_egt_agents - 1)
+                    p2_idx = random.randint(0, num_egt_agents - 1)
                     
-                new_population.append(EGTAgent(strategy=winner_strategy))
-        
-        # The new generation replaces the old one
-        population = new_population
+                    # Get their fitness (payoff)
+                    p1_fitness = egt_payoffs_this_generation[p1_idx]
+                    p2_fitness = egt_payoffs_this_generation[p2_idx]
+                    
+                    # The winner (with higher fitness) reproduces
+                    if p1_fitness > p2_fitness:
+                        winner_strategy = population[p1_idx].strategy
+                    else:
+                        winner_strategy = population[p2_idx].strategy
+                        
+                    new_population.append(EGTAgent(strategy=winner_strategy))
+            
+            # The new generation replaces the old one
+            population = new_population
 
         if gen % (num_generations // 10) == 0 or gen == 1:
             print(f"Generation {gen}/{num_generations}...")
@@ -273,54 +344,33 @@ def run_simulation(num_generations=100,
         
     # --- 6. Plotting ---
     
-    # Plot 1: Payoff Comparison
-    plt.figure(figsize=(12, 7))
-    plt.plot(arl_payoff_history, label="ARL 'Mutant' Agent Avg. Payoff", color='blue', linewidth=2)
-    plt.plot(egt_payoff_history, label="EGT Population Avg. Payoff", color='red', linestyle='--', linewidth=2)
-    plt.title("ARL 'Mutant' vs. Evolving EGT Population (Payoff per Generation)")
-    plt.xlabel("Generation")
-    plt.ylabel("Average Payoff per Generation")
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.tight_layout()
+    # Calculate the payoff gap
+    payoff_gap_history = [arl - egt for arl, egt in zip(arl_payoff_history, egt_payoff_history)]
     
-    plot1_filename = "arl_vs_egt_payoff.png"
-    plt.savefig(plot1_filename)
-    print(f"\nPayoff plot saved as '{plot1_filename}'")
-    plt.show()
-
-    # Plot 2: Population Dynamics
-    pop_df = pd.DataFrame(population_composition_history).fillna(0)
-    # Ensure all strategies are columns, even if one dies out
-    for strategy in STRATEGIES:
-        if strategy not in pop_df.columns:
-            pop_df[strategy] = 0
-    pop_df = pop_df[STRATEGIES] # Re-order columns for consistency
-    
-    plt.figure(figsize=(12, 7))
-    # Create stacked area plot
-    plt.stackplot(pop_df.index, 
-                  [pop_df[strategy] for strategy in STRATEGIES], 
-                  labels=STRATEGIES,
-                  alpha=0.8)
-    
-    plt.title("EGT Population Dynamics Over Generations")
-    plt.xlabel("Generation")
-    plt.ylabel(f"Number of Agents (out of {num_egt_agents})")
-    plt.legend(loc='upper left')
-    plt.grid(True, linestyle=':', alpha=0.7)
-    plt.tight_layout()
-
-    plot2_filename = "arl_vs_egt_population.png"
-    plt.savefig(plot2_filename)
-    print(f"Population plot saved as '{plot2_filename}'")
-    plt.show()
+    # Pass all data to the plotting function
+    plot_results(
+        arl_payoff_history, 
+        egt_payoff_history, 
+        population_composition_history, 
+        payoff_gap_history,
+        num_egt_agents
+    )
+    print("\n--- Plotting Complete ---")
 
 
 # --- Run the main function ---
 if __name__ == "__main__":
+    # Run the simulation with evolution ENABLED
     run_simulation(num_generations=100, 
                    rounds_per_generation=1000, 
                    num_egt_agents=100, 
-                   mutation_rate=0.2) # <-- CHANGED: Increased mutation rate
+                   mutation_rate=0.1,
+                   evolve_population=True)
 
+    # --- To run the "Static" experiment, you would call this: ---
+    # print("\n\n--- RUNNING EXPERIMENT: ARL vs. STATIC Population ---")
+    # run_simulation(num_generations=100, 
+    #                rounds_per_generation=1000, 
+    #                num_egt_agents=100, 
+    #                mutation_rate=0.0,
+    #                evolve_population=False)
