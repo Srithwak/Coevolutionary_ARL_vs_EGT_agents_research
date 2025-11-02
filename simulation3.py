@@ -831,22 +831,271 @@ class Market:
             print(f"  {strat.capitalize()}: {self.egt_proportions[i]:.3f}")
         print("=" * 30 + "\n")
 
+    # def plot_results(self):
+    #     # (This method is unchanged)
+    #     STD_FIGSIZE = (8, 6)
+    #     STD_DPI = 300
+    #     df_history = pd.DataFrame(self.history)
+    #     if df_history.empty:
+    #         print("History is empty, skipping plotting.")
+    #         return
+    #     print("PASS 1: Saving individual plot files...")
+    #     fig1, ax1 = plt.subplots(figsize=STD_FIGSIZE)
+    #     ax1.plot(
+    #         df_history["step"],
+    #         df_history["drl_profit"],
+    #         label="DRL Profit",
+    #         color="blue",
+    #     )
+    #     ax1.set_title("DRL Agent Cumulative Profit Over Time")
+    #     ax1.set_xlabel("Time Step")
+    #     ax1.set_ylabel("Total Profit ($)")
+    #     ax1.legend()
+    #     ax1.grid(True, alpha=0.3)
+    #     plt.tight_layout()
+    #     plt.savefig("plot_1_drl_profit.png", dpi=STD_DPI)
+    #     plt.close(fig1)
+    #     fig2, ax2 = plt.subplots(figsize=STD_FIGSIZE)
+    #     ax2.plot(
+    #         df_history["step"],
+    #         df_history["drl_inventory"],
+    #         label="DRL Inventory",
+    #         color="green",
+    #     )
+    #     ax2.axhline(
+    #         y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
+    #     )
+    #     ax2.set_title("DRL Agent Inventory Over Time")
+    #     ax2.set_xlabel("Time Step")
+    #     ax2.set_ylabel("Inventory (Units)")
+    #     ax2.legend()
+    #     ax2.grid(True, alpha=0.3)
+    #     plt.tight_layout()
+    #     plt.savefig("plot_2_drl_inventory.png", dpi=STD_DPI)
+    #     plt.close(fig2)
+    #     fig3, ax3 = plt.subplots(figsize=STD_FIGSIZE)
+    #     egt_labels = [s.capitalize() for s in self.egt_strategies]
+    #     egt_data = [df_history[f"egt_prop_{s}"] for s in self.egt_strategies]
+    #     ax3.stackplot(df_history["step"], egt_data, labels=egt_labels)
+    #     ax3.set_title("EGT Population Evolution (Replicator Dynamics)")
+    #     ax3.set_xlabel("Time Step")
+    #     ax3.set_ylabel("Proportion of Population")
+    #     ax3.set_ylim(0, 1)
+    #     ax3.legend(loc="upper left")
+    #     plt.tight_layout()
+    #     plt.savefig("plot_3_egt_dynamics.png", dpi=STD_DPI)
+    #     plt.close(fig3)
+    #     fig4, ax4 = plt.subplots(figsize=STD_FIGSIZE)
+    #     ax4.plot(
+    #         df_history["step"],
+    #         df_history["chosen_spread_width"],
+    #         label="Chosen Spread Width",
+    #         color="red",
+    #         alpha=0.6,
+    #     )
+    #     ax4.set_title("DRL Agent's Chosen Spread Width")
+    #     ax4.set_xlabel("Time Step")
+    #     ax4.set_ylabel("Spread Width ($)")
+    #     ax4.grid(True, alpha=0.3)
+    #     ax4_twin = ax4.twinx()
+    #     ax4_twin.plot(
+    #         df_history["step"],
+    #         df_history["epsilon"],
+    #         label="Epsilon",
+    #         color="grey",
+    #         linestyle=":",
+    #     )
+    #     ax4_twin.set_ylabel("Epsilon")
+    #     lines, labels = ax4.get_legend_handles_labels()
+    #     lines2, labels2 = ax4_twin.get_legend_handles_labels()
+    #     ax4.legend(lines + lines2, labels + labels2, loc="upper right")
+    #     plt.tight_layout()
+    #     plt.savefig("plot_4_drl_spread.png", dpi=STD_DPI)
+    #     plt.close(fig4)
+    #     fig5, ax5 = plt.subplots(figsize=STD_FIGSIZE)
+    #     df_history["rolling_avg_reward"] = (
+    #         df_history["reward"].rolling(window=100, min_periods=1).mean()
+    #     )
+    #     ax5.plot(
+    #         df_history["step"],
+    #         df_history["rolling_avg_reward"],
+    #         label="Rolling Avg. Reward (100 steps)",
+    #         color="purple",
+    #     )
+    #     ax5.axhline(y=0, color="black", linestyle="--", linewidth=1)
+    #     ax5.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
+    #     ax5.set_xlabel("Time Step")
+    #     ax5.set_ylabel("Average Reward")
+    #     ax5.legend()
+    #     ax5.grid(True, alpha=0.3)
+    #     plt.tight_layout()
+    #     plt.savefig("plot_5_rolling_reward.png", dpi=STD_DPI)
+    #     plt.close(fig5)
+    #     fig6, ax6 = plt.subplots(figsize=STD_FIGSIZE)
+    #     halfway_idx = len(df_history["step"]) // 2
+    #     exploiting_spreads = df_history["chosen_spread_width"].iloc[halfway_idx:]
+    #     if not exploiting_spreads.empty:
+    #         spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
+    #         spread_dist = spread_counts / len(exploiting_spreads)
+    #         spread_dist.plot(kind="bar", ax=ax6, color="teal")
+    #         ax6.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
+    #     else:
+    #         ax6.set_title("DRL Learned Policy (No data)")
+    #     ax6.set_xlabel("Chosen Spread Width ($)")
+    #     ax6.set_ylabel("Proportion of Actions")
+    #     ax6.set_ylim(0, 1)
+    #     ax6.tick_params(axis="x", rotation=0)
+    #     ax6.grid(axis="y", linestyle="--", alpha=0.5)
+    #     plt.tight_layout()
+    #     plt.savefig("plot_6_policy_dist.png", dpi=STD_DPI)
+    #     plt.close(fig6)
+    #     print(f"Successfully saved 6 plots (e.g., 'plot_1_drl_profit.png').")
+    #     print("PASS 2: Generating combined plot window...")
+    #     fig_display, axes = plt.subplots(3, 2, figsize=(16, 15))
+    #     fig_display.suptitle("DRL Agent vs EGT Population Simulation", fontsize=16)
+    #     ax_0_0 = axes[0, 0]
+    #     ax_0_0.plot(
+    #         df_history["step"],
+    #         df_history["drl_profit"],
+    #         label="DRL Profit",
+    #         color="blue",
+    #     )
+    #     ax_0_0.set_title("DRL Agent Cumulative Profit Over Time")
+    #     ax_0_0.set_xlabel("Time Step")
+    #     ax_0_0.set_ylabel("Total Profit ($)")
+    #     ax_0_0.legend()
+    #     ax_0_0.grid(True, alpha=0.3)
+    #     ax_0_1 = axes[0, 1]
+    #     ax_0_1.plot(
+    #         df_history["step"],
+    #         df_history["drl_inventory"],
+    #         label="DRL Inventory",
+    #         color="green",
+    #     )
+    #     ax_0_1.axhline(
+    #         y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
+    #     )
+    #     ax_0_1.set_title("DRL Agent Inventory Over Time")
+    #     ax_0_1.set_xlabel("Time Step")
+    #     ax_0_1.set_ylabel("Inventory (Units)")
+    #     ax_0_1.legend()
+    #     ax_0_1.grid(True, alpha=0.3)
+    #     ax_1_0 = axes[1, 0]
+    #     ax_1_0.stackplot(df_history["step"], egt_data, labels=egt_labels)
+    #     ax_1_0.set_title("EGT Population Evolution (Replicator Dynamics)")
+    #     ax_1_0.set_xlabel("Time Step")
+    #     ax_1_0.set_ylabel("Proportion of Population")
+    #     ax_1_0.set_ylim(0, 1)
+    #     ax_1_0.legend(loc="upper left")
+    #     ax_1_1 = axes[1, 1]
+    #     ax_1_1.plot(
+    #         df_history["step"],
+    #         df_history["chosen_spread_width"],
+    #         label="Chosen Spread Width",
+    #         color="red",
+    #         alpha=0.6,
+    #     )
+    #     ax_1_1.set_title("DRL Agent's Chosen Spread Width")
+    #     ax_1_1.set_xlabel("Time Step")
+    #     ax_1_1.set_ylabel("Spread Width ($)")
+    #     ax_1_1.grid(True, alpha=0.3)
+    #     ax_1_1_twin = ax_1_1.twinx()
+    #     ax_1_1_twin.plot(
+    #         df_history["step"],
+    #         df_history["epsilon"],
+    #         label="Epsilon",
+    #         color="grey",
+    #         linestyle=":",
+    #     )
+    #     ax_1_1_twin.set_ylabel("Epsilon")
+    #     lines, labels = ax_1_1.get_legend_handles_labels()
+    #     lines2, labels2 = ax_1_1_twin.get_legend_handles_labels()
+    #     ax_1_1.legend(lines + lines2, labels + labels2, loc="upper right")
+    #     ax_2_0 = axes[2, 0]
+    #     ax_2_0.plot(
+    #         df_history["step"],
+    #         df_history["rolling_avg_reward"],
+    #         label="Rolling Avg. Reward (100 steps)",
+    #         color="purple",
+    #     )
+    #     ax_2_0.axhline(y=0, color="black", linestyle="--", linewidth=1)
+    #     ax_2_0.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
+    #     ax_2_0.set_xlabel("Time Step")
+    #     ax_2_0.set_ylabel("Average Reward")
+    #     ax_2_0.legend()
+    #     ax_2_0.grid(True, alpha=0.3)
+    #     ax_2_1 = axes[2, 1]
+    #     if not exploiting_spreads.empty:
+    #         spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
+    #         spread_dist = spread_counts / len(exploiting_spreads)
+    #         spread_dist.plot(kind="bar", ax=ax_2_1, color="teal")
+    #         ax_2_1.set_title(
+    #             f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)"
+    #         )
+    #     else:
+    #         ax_2_1.set_title("DRL Learned Policy (No data)")
+    #     ax_2_1.set_xlabel("Chosen Spread Width ($)")
+    #     ax_2_1.set_ylabel("Proportion of Actions")
+    #     ax_2_1.set_ylim(0, 1)
+    #     ax_2_1.tick_params(axis="x", rotation=0)
+    #     ax_2_1.grid(axis="y", linestyle="--", alpha=0.5)
+    #     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    #     plt.savefig("plot_0_combined_summary.png", dpi=STD_DPI)
+    #     print("Displaying combined plot window...")
+
+
+
+
+    #     # --- NEW: DRL–EGT Dependency Graph ---
+    #     fig_dep, ax_dep = plt.subplots(figsize=STD_FIGSIZE)
+    #     df_history["egt_avg"] = df_history[
+    #         [f"egt_prop_{s}" for s in self.egt_strategies]
+    #     ].mean(axis=1)
+
+    #     # Use correlation between DRL profit changes and EGT shifts as dependency metric
+    #     df_history["drl_profit_change"] = df_history["drl_profit"].diff().fillna(0)
+    #     df_history["egt_change"] = df_history["egt_avg"].diff().fillna(0)
+    #     rolling_corr = (
+    #         df_history["drl_profit_change"]
+    #         .rolling(window=100, min_periods=10)
+    #         .corr(df_history["egt_change"])
+    #     )
+
+    #     ax_dep.plot(
+    #         df_history["step"],
+    #         rolling_corr,
+    #         color="darkorange",
+    #         label="Rolling Correlation (DRL Profit vs EGT Change)",
+    #     )
+    #     ax_dep.axhline(y=0, color="black", linestyle="--", linewidth=1)
+    #     ax_dep.set_title("Dependency of DRL Agent on EGT Population")
+    #     ax_dep.set_xlabel("Time Step")
+    #     ax_dep.set_ylabel("Rolling Correlation")
+    #     ax_dep.legend()
+    #     ax_dep.grid(True, alpha=0.3)
+    #     plt.tight_layout()
+    #     plt.savefig("plot_7_drl_egt_dependency.png", dpi=STD_DPI)
+    #     plt.close(fig_dep)
+
+
+
+
+    #     plt.show()
+
+
     def plot_results(self):
-        # (This method is unchanged)
         STD_FIGSIZE = (8, 6)
         STD_DPI = 300
         df_history = pd.DataFrame(self.history)
         if df_history.empty:
             print("History is empty, skipping plotting.")
             return
+
         print("PASS 1: Saving individual plot files...")
+
+        # --- Plot 1: DRL Profit ---
         fig1, ax1 = plt.subplots(figsize=STD_FIGSIZE)
-        ax1.plot(
-            df_history["step"],
-            df_history["drl_profit"],
-            label="DRL Profit",
-            color="blue",
-        )
+        ax1.plot(df_history["step"], df_history["drl_profit"], label="DRL Profit", color="blue")
         ax1.set_title("DRL Agent Cumulative Profit Over Time")
         ax1.set_xlabel("Time Step")
         ax1.set_ylabel("Total Profit ($)")
@@ -855,16 +1104,11 @@ class Market:
         plt.tight_layout()
         plt.savefig("plot_1_drl_profit.png", dpi=STD_DPI)
         plt.close(fig1)
+
+        # --- Plot 2: DRL Inventory ---
         fig2, ax2 = plt.subplots(figsize=STD_FIGSIZE)
-        ax2.plot(
-            df_history["step"],
-            df_history["drl_inventory"],
-            label="DRL Inventory",
-            color="green",
-        )
-        ax2.axhline(
-            y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
-        )
+        ax2.plot(df_history["step"], df_history["drl_inventory"], label="DRL Inventory", color="green")
+        ax2.axhline(y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)")
         ax2.set_title("DRL Agent Inventory Over Time")
         ax2.set_xlabel("Time Step")
         ax2.set_ylabel("Inventory (Units)")
@@ -873,6 +1117,8 @@ class Market:
         plt.tight_layout()
         plt.savefig("plot_2_drl_inventory.png", dpi=STD_DPI)
         plt.close(fig2)
+
+        # --- Plot 3: EGT Population Dynamics ---
         fig3, ax3 = plt.subplots(figsize=STD_FIGSIZE)
         egt_labels = [s.capitalize() for s in self.egt_strategies]
         egt_data = [df_history[f"egt_prop_{s}"] for s in self.egt_strategies]
@@ -885,26 +1131,16 @@ class Market:
         plt.tight_layout()
         plt.savefig("plot_3_egt_dynamics.png", dpi=STD_DPI)
         plt.close(fig3)
+
+        # --- Plot 4: Spread Width + Epsilon ---
         fig4, ax4 = plt.subplots(figsize=STD_FIGSIZE)
-        ax4.plot(
-            df_history["step"],
-            df_history["chosen_spread_width"],
-            label="Chosen Spread Width",
-            color="red",
-            alpha=0.6,
-        )
+        ax4.plot(df_history["step"], df_history["chosen_spread_width"], label="Chosen Spread Width", color="red", alpha=0.6)
         ax4.set_title("DRL Agent's Chosen Spread Width")
         ax4.set_xlabel("Time Step")
         ax4.set_ylabel("Spread Width ($)")
         ax4.grid(True, alpha=0.3)
         ax4_twin = ax4.twinx()
-        ax4_twin.plot(
-            df_history["step"],
-            df_history["epsilon"],
-            label="Epsilon",
-            color="grey",
-            linestyle=":",
-        )
+        ax4_twin.plot(df_history["step"], df_history["epsilon"], label="Epsilon", color="grey", linestyle=":")
         ax4_twin.set_ylabel("Epsilon")
         lines, labels = ax4.get_legend_handles_labels()
         lines2, labels2 = ax4_twin.get_legend_handles_labels()
@@ -912,16 +1148,11 @@ class Market:
         plt.tight_layout()
         plt.savefig("plot_4_drl_spread.png", dpi=STD_DPI)
         plt.close(fig4)
+
+        # --- Plot 5: Rolling Average Reward ---
         fig5, ax5 = plt.subplots(figsize=STD_FIGSIZE)
-        df_history["rolling_avg_reward"] = (
-            df_history["reward"].rolling(window=100, min_periods=1).mean()
-        )
-        ax5.plot(
-            df_history["step"],
-            df_history["rolling_avg_reward"],
-            label="Rolling Avg. Reward (100 steps)",
-            color="purple",
-        )
+        df_history["rolling_avg_reward"] = df_history["reward"].rolling(window=100, min_periods=1).mean()
+        ax5.plot(df_history["step"], df_history["rolling_avg_reward"], label="Rolling Avg. Reward (100 steps)", color="purple")
         ax5.axhline(y=0, color="black", linestyle="--", linewidth=1)
         ax5.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
         ax5.set_xlabel("Time Step")
@@ -931,55 +1162,60 @@ class Market:
         plt.tight_layout()
         plt.savefig("plot_5_rolling_reward.png", dpi=STD_DPI)
         plt.close(fig5)
+
+        # --- Plot 6: Policy Distribution (CLEANED UP) ---
         fig6, ax6 = plt.subplots(figsize=STD_FIGSIZE)
         halfway_idx = len(df_history["step"]) // 2
         exploiting_spreads = df_history["chosen_spread_width"].iloc[halfway_idx:]
+
         if not exploiting_spreads.empty:
-            spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
-            spread_dist = spread_counts / len(exploiting_spreads)
+            # ✅ Round spread widths to clean up x-axis clutter
+            spread_widths_rounded = exploiting_spreads.round(2)
+            spread_counts = spread_widths_rounded.value_counts().sort_index()
+            spread_dist = spread_counts / len(spread_widths_rounded)
+
             spread_dist.plot(kind="bar", ax=ax6, color="teal")
             ax6.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
+            ax6.set_xlabel("Chosen Spread Width ($)")
+            ax6.set_ylabel("Proportion of Actions")
+            ax6.set_ylim(0, 1)
+
+            # ✅ Make x-axis clean and readable
+            ax6.set_xticklabels(spread_dist.index, rotation=0)
+            ax6.grid(axis="y", linestyle="--", alpha=0.5)
         else:
             ax6.set_title("DRL Learned Policy (No data)")
-        ax6.set_xlabel("Chosen Spread Width ($)")
-        ax6.set_ylabel("Proportion of Actions")
-        ax6.set_ylim(0, 1)
-        ax6.tick_params(axis="x", rotation=0)
-        ax6.grid(axis="y", linestyle="--", alpha=0.5)
+
         plt.tight_layout()
         plt.savefig("plot_6_policy_dist.png", dpi=STD_DPI)
         plt.close(fig6)
-        print(f"Successfully saved 6 plots (e.g., 'plot_1_drl_profit.png').")
+
+        print("Successfully saved 6 plots (e.g., 'plot_1_drl_profit.png').")
         print("PASS 2: Generating combined plot window...")
+
+        # --- Combined Summary Display ---
         fig_display, axes = plt.subplots(3, 2, figsize=(16, 15))
         fig_display.suptitle("DRL Agent vs EGT Population Simulation", fontsize=16)
+
+        # Row 1
         ax_0_0 = axes[0, 0]
-        ax_0_0.plot(
-            df_history["step"],
-            df_history["drl_profit"],
-            label="DRL Profit",
-            color="blue",
-        )
+        ax_0_0.plot(df_history["step"], df_history["drl_profit"], label="DRL Profit", color="blue")
         ax_0_0.set_title("DRL Agent Cumulative Profit Over Time")
         ax_0_0.set_xlabel("Time Step")
         ax_0_0.set_ylabel("Total Profit ($)")
         ax_0_0.legend()
         ax_0_0.grid(True, alpha=0.3)
+
         ax_0_1 = axes[0, 1]
-        ax_0_1.plot(
-            df_history["step"],
-            df_history["drl_inventory"],
-            label="DRL Inventory",
-            color="green",
-        )
-        ax_0_1.axhline(
-            y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
-        )
+        ax_0_1.plot(df_history["step"], df_history["drl_inventory"], label="DRL Inventory", color="green")
+        ax_0_1.axhline(y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)")
         ax_0_1.set_title("DRL Agent Inventory Over Time")
         ax_0_1.set_xlabel("Time Step")
         ax_0_1.set_ylabel("Inventory (Units)")
         ax_0_1.legend()
         ax_0_1.grid(True, alpha=0.3)
+
+        # Row 2
         ax_1_0 = axes[1, 0]
         ax_1_0.stackplot(df_history["step"], egt_data, labels=egt_labels)
         ax_1_0.set_title("EGT Population Evolution (Replicator Dynamics)")
@@ -987,100 +1223,49 @@ class Market:
         ax_1_0.set_ylabel("Proportion of Population")
         ax_1_0.set_ylim(0, 1)
         ax_1_0.legend(loc="upper left")
+
         ax_1_1 = axes[1, 1]
-        ax_1_1.plot(
-            df_history["step"],
-            df_history["chosen_spread_width"],
-            label="Chosen Spread Width",
-            color="red",
-            alpha=0.6,
-        )
+        ax_1_1.plot(df_history["step"], df_history["chosen_spread_width"], label="Chosen Spread Width", color="red", alpha=0.6)
+        ax_1_1_twin = ax_1_1.twinx()
+        ax_1_1_twin.plot(df_history["step"], df_history["epsilon"], label="Epsilon", color="grey", linestyle=":")
         ax_1_1.set_title("DRL Agent's Chosen Spread Width")
         ax_1_1.set_xlabel("Time Step")
         ax_1_1.set_ylabel("Spread Width ($)")
-        ax_1_1.grid(True, alpha=0.3)
-        ax_1_1_twin = ax_1_1.twinx()
-        ax_1_1_twin.plot(
-            df_history["step"],
-            df_history["epsilon"],
-            label="Epsilon",
-            color="grey",
-            linestyle=":",
-        )
         ax_1_1_twin.set_ylabel("Epsilon")
         lines, labels = ax_1_1.get_legend_handles_labels()
         lines2, labels2 = ax_1_1_twin.get_legend_handles_labels()
         ax_1_1.legend(lines + lines2, labels + labels2, loc="upper right")
+        ax_1_1.grid(True, alpha=0.3)
+
+        # Row 3
         ax_2_0 = axes[2, 0]
-        ax_2_0.plot(
-            df_history["step"],
-            df_history["rolling_avg_reward"],
-            label="Rolling Avg. Reward (100 steps)",
-            color="purple",
-        )
+        ax_2_0.plot(df_history["step"], df_history["rolling_avg_reward"], label="Rolling Avg. Reward (100 steps)", color="purple")
         ax_2_0.axhline(y=0, color="black", linestyle="--", linewidth=1)
         ax_2_0.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
         ax_2_0.set_xlabel("Time Step")
         ax_2_0.set_ylabel("Average Reward")
         ax_2_0.legend()
         ax_2_0.grid(True, alpha=0.3)
+
         ax_2_1 = axes[2, 1]
         if not exploiting_spreads.empty:
-            spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
-            spread_dist = spread_counts / len(exploiting_spreads)
             spread_dist.plot(kind="bar", ax=ax_2_1, color="teal")
-            ax_2_1.set_title(
-                f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)"
-            )
+            ax_2_1.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
+            ax_2_1.set_xlabel("Chosen Spread Width ($)")
+            ax_2_1.set_ylabel("Proportion of Actions")
+            ax_2_1.set_ylim(0, 1)
+            ax_2_1.set_xticklabels(spread_dist.index, rotation=0)
+            ax_2_1.grid(axis="y", linestyle="--", alpha=0.5)
         else:
             ax_2_1.set_title("DRL Learned Policy (No data)")
-        ax_2_1.set_xlabel("Chosen Spread Width ($)")
-        ax_2_1.set_ylabel("Proportion of Actions")
-        ax_2_1.set_ylim(0, 1)
-        ax_2_1.tick_params(axis="x", rotation=0)
-        ax_2_1.grid(axis="y", linestyle="--", alpha=0.5)
+
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.savefig("plot_0_combined_summary.png", dpi=STD_DPI)
         print("Displaying combined plot window...")
-
-
-
-
-        # --- NEW: DRL–EGT Dependency Graph ---
-        fig_dep, ax_dep = plt.subplots(figsize=STD_FIGSIZE)
-        df_history["egt_avg"] = df_history[
-            [f"egt_prop_{s}" for s in self.egt_strategies]
-        ].mean(axis=1)
-
-        # Use correlation between DRL profit changes and EGT shifts as dependency metric
-        df_history["drl_profit_change"] = df_history["drl_profit"].diff().fillna(0)
-        df_history["egt_change"] = df_history["egt_avg"].diff().fillna(0)
-        rolling_corr = (
-            df_history["drl_profit_change"]
-            .rolling(window=100, min_periods=10)
-            .corr(df_history["egt_change"])
-        )
-
-        ax_dep.plot(
-            df_history["step"],
-            rolling_corr,
-            color="darkorange",
-            label="Rolling Correlation (DRL Profit vs EGT Change)",
-        )
-        ax_dep.axhline(y=0, color="black", linestyle="--", linewidth=1)
-        ax_dep.set_title("Dependency of DRL Agent on EGT Population")
-        ax_dep.set_xlabel("Time Step")
-        ax_dep.set_ylabel("Rolling Correlation")
-        ax_dep.legend()
-        ax_dep.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.savefig("plot_7_drl_egt_dependency.png", dpi=STD_DPI)
-        plt.close(fig_dep)
-
-
-
-
         plt.show()
+
+
+
 
 
 if __name__ == "__main__":
@@ -1128,4 +1313,4 @@ if __name__ == "__main__":
 
         traceback.print_exc()
 
-# this was derived from 8, 9 kinda messed up.
+# fixed x axis clutter on spread policy chart
