@@ -112,7 +112,7 @@ class DQNAgent:
         default_params = {
             "gamma": 0.95,
             "epsilon": 1.0,
-            "epsilon_decay": 0.995, # change from .995 to .998
+            "epsilon_decay": 0.995,  # change from .995 to .998
             "epsilon_min": 0.01,
             "learning_rate": 0.001,
             "replay_buffer_maxlen": 2000,
@@ -150,32 +150,11 @@ class DQNAgent:
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
-    # ---
-    # --- MODIFIED: Linear Inventory Normalization ---
-    # ---
-    # def format_state(
-    #     self, inventory, volatility, momentum, norm_volume, rsi, step, max_steps
-    # ):
-    #     """
-    #     Formats the agent's and market's state into a normalized vector for the NN.
-    #     """
-    #     # Linearly clip inventory. Agent sees -1.0 for -100 or less,
-    #     # +1.0 for +100 or more, and a linear value (e.g., 0.5 for +50) in between.
-    #     norm_inventory = np.clip(inventory, -100, 100) / 100.0
-    #     # --- End Modification ---
-
-    #     norm_time = step / max_steps
-    #     norm_rsi = (rsi / 50.0) - 1.0
-    #     norm_vol = np.tanh(norm_volume - 1.0)
-    #     return np.array(
-    #         [[norm_inventory, volatility, momentum, norm_vol, norm_rsi, norm_time]]
-    #     )
-
     def format_state(
         self, inventory, volatility, momentum, norm_volume, rsi, step, max_steps
     ):
         # norm_inventory = np.tanh(inventory / 10.0)  # smooth sensitivity to imbalance
-        norm_inventory = np.tanh(inventory / 5.0) # ADDED
+        norm_inventory = np.tanh(inventory / 5.0)  # ADDED
 
         norm_time = step / max_steps
         norm_rsi = (rsi / 50.0) - 1.0
@@ -292,394 +271,6 @@ class Market:
         self.egt_total_payoffs.fill(0)
         self.egt_total_trades.fill(0)
 
-    # def run_step(self):
-    #     market_data_tuple = self.market_data.get_market_state(self.step)
-    #     mid_price, volatility, momentum, norm_volume, rsi = market_data_tuple
-    #     if mid_price is None:
-    #         return False
-
-    #     state = self.drl_agent.format_state(
-    #         self.drl_agent.inventory,
-    #         volatility,
-    #         momentum,
-    #         norm_volume,
-    #         rsi,
-    #         self.step,
-    #         self.market_data.max_steps,
-    #     )
-    #     action_idx = self.drl_agent.choose_action(state)
-    #     bid_spread, ask_spread = self.drl_agent.actions[action_idx]
-    #     drl_bid_price = mid_price - bid_spread
-    #     drl_ask_price = mid_price + ask_spread
-
-    #     step_payoffs = np.zeros(len(self.egt_strategies))
-    #     step_trades = np.zeros(len(self.egt_strategies))
-    #     drl_trades_this_step = 0
-
-    #     sampled_agents = np.random.choice(
-    #         self.egt_strategies, size=self.N_EGT_AGENTS_PER_STEP, p=self.egt_proportions
-    #     )
-    #     for strategy_name in sampled_agents:
-    #         egt_action, egt_price = self.get_egt_action(
-    #             strategy_name, mid_price, momentum
-    #         )
-    #         strat_idx = self.egt_strategies.index(strategy_name)
-    #         if egt_action == "sell" and egt_price <= drl_bid_price:
-    #             self.drl_agent.inventory += 1
-    #             self.drl_agent.cash -= drl_bid_price
-    #             step_payoffs[strat_idx] += drl_bid_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-    #         elif egt_action == "buy" and egt_price >= drl_ask_price:
-    #             self.drl_agent.inventory -= 1
-    #             self.drl_agent.cash += drl_ask_price
-    #             step_payoffs[strat_idx] -= drl_ask_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-    #     self.egt_total_payoffs += step_payoffs
-    #     self.egt_total_trades += step_trades
-
-    #     inventory_after_trades = self.drl_agent.inventory
-
-    #     # Using the Quadratic Penalty from v7
-    #     current_portfolio_value = self.drl_agent.cash + (
-    #         inventory_after_trades * mid_price
-    #     )
-    #     reward = current_portfolio_value - self.last_drl_value
-    #     reward -= drl_trades_this_step * self.transaction_cost_per_trade
-    #     reward -= (inventory_after_trades**2) * self.inventory_penalty_factor
-
-    #     next_data_tuple = self.market_data.get_market_state(self.step + 1)
-    #     next_price, next_vol, next_mom, next_norm_vol, next_rsi = next_data_tuple
-    #     done = next_price is None
-
-    #     if done:
-    #         next_state = state
-    #     else:
-    #         next_state = self.drl_agent.format_state(
-    #             inventory_after_trades,
-    #             next_vol,
-    #             next_mom,
-    #             next_norm_vol,
-    #             next_rsi,
-    #             self.step + 1,
-    #             self.market_data.max_steps,
-    #         )
-
-    #     self.drl_agent.remember(state, action_idx, reward, next_state, done)
-    #     self.drl_agent.replay()
-    #     self.last_drl_value = current_portfolio_value
-
-    #     if self.step % self.EVOLVE_EVERY == 0:
-    #         self.evolve_population()
-    #     if self.step % self.UPDATE_TARGET_EVERY == 0:
-    #         self.drl_agent.update_target_model()
-
-    #     self.history["step"].append(self.step)
-    #     self.history["mid_price"].append(mid_price)
-    #     self.history["drl_profit"].append(current_portfolio_value)
-    #     self.history["drl_inventory"].append(inventory_after_trades)
-    #     self.history["chosen_spread_width"].append(bid_spread + ask_spread)
-    #     self.history["epsilon"].append(self.drl_agent.epsilon)
-    #     self.history["reward"].append(reward)
-    #     for i, strat in enumerate(self.egt_strategies):
-    #         self.history[f"egt_prop_{strat}"].append(self.egt_proportions[i])
-
-    #     self.step += 1
-    #     return True
-
-    # def run_step(self):
-    #     market_data_tuple = self.market_data.get_market_state(self.step)
-    #     mid_price, volatility, momentum, norm_volume, rsi = market_data_tuple
-    #     if mid_price is None:
-    #         return False
-
-    #     # --- 1. DRL Agent chooses action ---
-    #     state = self.drl_agent.format_state(
-    #         self.drl_agent.inventory,
-    #         volatility,
-    #         momentum,
-    #         norm_volume,
-    #         rsi,
-    #         self.step,
-    #         self.market_data.max_steps,
-    #     )
-    #     action_idx = self.drl_agent.choose_action(state)
-    #     bid_spread, ask_spread = self.drl_agent.actions[action_idx]
-
-    #     # --- 2. Dynamic spread adjustment (inventory control heuristic) ---
-    #     if self.drl_agent.inventory > 0:
-    #         # Long inventory → encourage selling
-    #         bid_spread *= 1.2  # discourage buying
-    #         ask_spread *= 0.8  # encourage selling
-    #     elif self.drl_agent.inventory < 0:
-    #         # Short inventory → encourage buying
-    #         bid_spread *= 0.8
-    #         ask_spread *= 1.2
-
-    #     drl_bid_price = mid_price - bid_spread
-    #     drl_ask_price = mid_price + ask_spread
-
-    #     # --- 3. Simulate EGT population trading ---
-    #     step_payoffs = np.zeros(len(self.egt_strategies))
-    #     step_trades = np.zeros(len(self.egt_strategies))
-    #     drl_trades_this_step = 0
-
-    #     sampled_agents = np.random.choice(
-    #         self.egt_strategies, size=self.N_EGT_AGENTS_PER_STEP, p=self.egt_proportions
-    #     )
-    #     for strategy_name in sampled_agents:
-    #         egt_action, egt_price = self.get_egt_action(strategy_name, mid_price, momentum)
-    #         strat_idx = self.egt_strategies.index(strategy_name)
-
-    #         if egt_action == "sell" and egt_price <= drl_bid_price:
-    #             self.drl_agent.inventory += 1
-    #             self.drl_agent.cash -= drl_bid_price
-    #             step_payoffs[strat_idx] += drl_bid_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-    #         elif egt_action == "buy" and egt_price >= drl_ask_price:
-    #             self.drl_agent.inventory -= 1
-    #             self.drl_agent.cash += drl_ask_price
-    #             step_payoffs[strat_idx] -= drl_ask_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-
-    #     self.egt_total_payoffs += step_payoffs
-    #     self.egt_total_trades += step_trades
-
-    #     # --- 4. Reward calculation ---
-    #     inv = self.drl_agent.inventory
-    #     current_value = self.drl_agent.cash + (inv * mid_price)
-    #     reward = current_value - self.last_drl_value  # base profit/loss
-
-    #     # Inventory penalties — immediate mean-reversion feedback
-    #     reward -= 0.005 * abs(inv)         # linear penalty
-    #     reward -= 0.001 * (inv ** 2)       # quadratic penalty
-    #     reward -= drl_trades_this_step * self.transaction_cost_per_trade
-
-    #     # Update reward baseline AFTER all penalties
-    #     self.last_drl_value = current_value
-
-    #     # --- 5. Next state & training ---
-    #     next_data_tuple = self.market_data.get_market_state(self.step + 1)
-    #     next_price, next_vol, next_mom, next_norm_vol, next_rsi = next_data_tuple
-    #     done = next_price is None
-
-    #     if done:
-    #         next_state = state
-    #     else:
-    #         next_state = self.drl_agent.format_state(
-    #             inv,
-    #             next_vol,
-    #             next_mom,
-    #             next_norm_vol,
-    #             next_rsi,
-    #             self.step + 1,
-    #             self.market_data.max_steps,
-    #         )
-
-    #     self.drl_agent.remember(state, action_idx, reward, next_state, done)
-    #     self.drl_agent.replay()
-
-    #     if self.step % self.EVOLVE_EVERY == 0:
-    #         self.evolve_population()
-    #     if self.step % self.UPDATE_TARGET_EVERY == 0:
-    #         self.drl_agent.update_target_model()
-
-    #     # --- 6. Log data for plots ---
-    #     self.history["step"].append(self.step)
-    #     self.history["mid_price"].append(mid_price)
-    #     self.history["drl_profit"].append(current_value)
-    #     self.history["drl_inventory"].append(inv)
-    #     self.history["chosen_spread_width"].append(bid_spread + ask_spread)
-    #     self.history["epsilon"].append(self.drl_agent.epsilon)
-    #     self.history["reward"].append(reward)
-    #     for i, strat in enumerate(self.egt_strategies):
-    #         self.history[f"egt_prop_{strat}"].append(self.egt_proportions[i])
-
-    #     self.step += 1
-    #     return True
-
-
-
-    # CHANGED
-    # def run_step(self):
-    #     market_data_tuple = self.market_data.get_market_state(self.step)
-    #     mid_price, volatility, momentum, norm_volume, rsi = market_data_tuple
-    #     if mid_price is None:
-    #         return False
-
-    #     # --- 1. DRL Agent chooses action ---
-    #     state = self.drl_agent.format_state(
-    #         self.drl_agent.inventory,
-    #         volatility,
-    #         momentum,
-    #         norm_volume,
-    #         rsi,
-    #         self.step,
-    #         self.market_data.max_steps,
-    #     )
-    #     action_idx = self.drl_agent.choose_action(state)
-    #     bid_spread, ask_spread = self.drl_agent.actions[action_idx]
-
-    #     # --- 2. Dynamic spread adjustment (inventory control heuristic) ---
-    #     inv_bias = np.clip(abs(self.drl_agent.inventory) / 5.0, 1.0, 3.0) # ADDED
-    #     # inv_bias = np.clip(abs(self.drl_agent.inventory) / 10.0, 1.0, 2.0)
-    #     if self.drl_agent.inventory > 0:
-    #         # Long inventory → encourage selling
-    #         bid_spread *= inv_bias      # discourage buying
-    #         ask_spread /= inv_bias      # encourage selling
-    #     elif self.drl_agent.inventory < 0:
-    #         # Short inventory → encourage buying
-    #         bid_spread /= inv_bias      # encourage buying
-    #         ask_spread *= inv_bias      # discourage selling
-
-    #     drl_bid_price = mid_price - bid_spread
-    #     drl_ask_price = mid_price + ask_spread
-
-    #     # --- 3. Simulate EGT population trading ---
-    #     step_payoffs = np.zeros(len(self.egt_strategies))
-    #     step_trades = np.zeros(len(self.egt_strategies))
-    #     drl_trades_this_step = 0
-
-    #     sampled_agents = np.random.choice(
-    #         self.egt_strategies, size=self.N_EGT_AGENTS_PER_STEP, p=self.egt_proportions
-    #     )
-    #     for strategy_name in sampled_agents:
-    #         egt_action, egt_price = self.get_egt_action(strategy_name, mid_price, momentum)
-    #         strat_idx = self.egt_strategies.index(strategy_name)
-
-    #         if egt_action == "sell" and egt_price <= drl_bid_price:
-    #             self.drl_agent.inventory += 1
-    #             self.drl_agent.cash -= drl_bid_price
-    #             step_payoffs[strat_idx] += drl_bid_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-    #         elif egt_action == "buy" and egt_price >= drl_ask_price:
-    #             self.drl_agent.inventory -= 1
-    #             self.drl_agent.cash += drl_ask_price
-    #             step_payoffs[strat_idx] -= drl_ask_price
-    #             step_trades[strat_idx] += 1
-    #             drl_trades_this_step += 1
-
-    #     self.egt_total_payoffs += step_payoffs
-    #     self.egt_total_trades += step_trades
-
-    #     # # --- 4. Reward calculation ---
-    #     # inv = self.drl_agent.inventory
-    #     # current_value = self.drl_agent.cash + (inv * mid_price)
-    #     # reward = current_value - self.last_drl_value  # base profit/loss
-
-    #     # # Inventory penalties — immediate mean-reversion feedback
-    #     # reward -= 0.005 * abs(inv)          # linear penalty
-    #     # reward -= 0.001 * (inv ** 2)        # quadratic penalty
-    #     # reward -= drl_trades_this_step * self.transaction_cost_per_trade
-
-    #     # # --- NEW: Mean-reversion incentive ---
-    #     # if abs(inv) > 0:
-    #     #     prev_inv = self.history["drl_inventory"][-1] if self.history["drl_inventory"] else 0
-    #     #     if abs(inv) < abs(prev_inv):  # reduced exposure
-    #     #         reward += 0.003 * (abs(prev_inv) - abs(inv))
-
-    #     # # Update reward baseline AFTER all penalties and bonuses
-    #     # self.last_drl_value = current_value
-
-
-    #     # # --- 4. Reward calculation ---
-    #     # inv = self.drl_agent.inventory
-    #     # current_value = self.drl_agent.cash + (inv * mid_price)
-    #     # reward = current_value - self.last_drl_value  # base profit/loss since last step
-
-    #     # # --- Inventory penalties: discourage imbalance ---
-    #     # reward -= 0.005 * abs(inv)           # linear penalty for holding inventory
-    #     # reward -= 0.001 * (inv ** 2)         # stronger penalty for large exposure
-    #     # reward -= drl_trades_this_step * self.transaction_cost_per_trade  # transaction costs
-
-    #     # # --- Mean-reversion incentive: reward reducing exposure magnitude ---
-    #     # if abs(inv) > 0:
-    #     #     prev_inv = self.history["drl_inventory"][-1] if self.history["drl_inventory"] else 0
-    #     #     if abs(inv) < abs(prev_inv):
-    #     #         reward += 0.003 * (abs(prev_inv) - abs(inv))  # reward for moving toward 0
-
-    #     # # --- Zero-balance incentive: reward staying centered near 0 inventory ---
-    #     # reward += 0.002 * (1 - min(abs(inv) / 20.0, 1.0))  # peaks at 0, fades by ±20
-
-    #     # # --- Update reward baseline AFTER all penalties and bonuses ---
-    #     # self.last_drl_value = current_value
-
-    #     # --- 4. Reward calculation ---
-    #     inv = self.drl_agent.inventory
-    #     current_value = self.drl_agent.cash + (inv * mid_price)
-    #     reward = current_value - self.last_drl_value  # base profit/loss since last step
-
-    #     # --- Inventory penalties: discourage imbalance ---
-    #     reward -= 0.005 * abs(inv)            # linear penalty for any exposure
-    #     reward -= 0.001 * (inv ** 2)          # stronger penalty for large inventory
-    #     reward -= drl_trades_this_step * self.transaction_cost_per_trade  # transaction costs
-
-    #     # --- Mean-reversion incentive: reward reductions toward 0 ---
-    #     if abs(inv) > 0:
-    #         prev_inv = self.history["drl_inventory"][-1] if self.history["drl_inventory"] else 0
-    #         if abs(inv) < abs(prev_inv):
-    #             reward += 0.003 * (abs(prev_inv) - abs(inv))  # reward for moving closer to neutral
-
-    #     # --- Zero-balance incentive: small bonus near zero inventory ---
-    #     reward += 0.002 * (1 - min(abs(inv) / 20.0, 1.0))  # peaks at 0, fades by ±20
-
-    #     # --- NEW: Symmetry correction (counteracts persistent bias) ---
-    #     reward -= 0.002 * inv  # pushes negative inventory upward, positive downward
-
-    #     # --- Update reward baseline AFTER all penalties and bonuses ---
-    #     self.last_drl_value = current_value
-
-
-
-
-
-
-
-    #     # --- 5. Next state & training ---
-    #     next_data_tuple = self.market_data.get_market_state(self.step + 1)
-    #     next_price, next_vol, next_mom, next_norm_vol, next_rsi = next_data_tuple
-    #     done = next_price is None
-
-    #     if done:
-    #         next_state = state
-    #     else:
-    #         next_state = self.drl_agent.format_state(
-    #             inv,
-    #             next_vol,
-    #             next_mom,
-    #             next_norm_vol,
-    #             next_rsi,
-    #             self.step + 1,
-    #             self.market_data.max_steps,
-    #         )
-
-    #     self.drl_agent.remember(state, action_idx, reward, next_state, done)
-    #     self.drl_agent.replay()
-
-    #     # --- 6. Population evolution & target updates ---
-    #     if self.step % self.EVOLVE_EVERY == 0:
-    #         self.evolve_population()
-    #     if self.step % self.UPDATE_TARGET_EVERY == 0:
-    #         self.drl_agent.update_target_model()
-
-    #     # --- 7. Logging for analysis ---
-    #     self.history["step"].append(self.step)
-    #     self.history["mid_price"].append(mid_price)
-    #     self.history["drl_profit"].append(current_value)
-    #     self.history["drl_inventory"].append(inv)
-    #     self.history["chosen_spread_width"].append(bid_spread + ask_spread)
-    #     self.history["epsilon"].append(self.drl_agent.epsilon)
-    #     self.history["reward"].append(reward)
-    #     for i, strat in enumerate(self.egt_strategies):
-    #         self.history[f"egt_prop_{strat}"].append(self.egt_proportions[i])
-
-    #     self.step += 1
-    #     return True
-
     def run_step(self):
         market_data_tuple = self.market_data.get_market_state(self.step)
         mid_price, volatility, momentum, norm_volume, rsi = market_data_tuple
@@ -702,11 +293,11 @@ class Market:
         # --- 2. Dynamic spread adjustment (tighter inventory control) ---
         inv_bias = np.clip(abs(self.drl_agent.inventory) / 5.0, 1.0, 3.0)
         if self.drl_agent.inventory > 0:
-            bid_spread *= inv_bias      # discourage buying
-            ask_spread /= inv_bias      # encourage selling
+            bid_spread *= inv_bias  # discourage buying
+            ask_spread /= inv_bias  # encourage selling
         elif self.drl_agent.inventory < 0:
-            bid_spread /= inv_bias      # encourage buying
-            ask_spread *= inv_bias      # discourage selling
+            bid_spread /= inv_bias  # encourage buying
+            ask_spread *= inv_bias  # discourage selling
 
         drl_bid_price = mid_price - bid_spread
         drl_ask_price = mid_price + ask_spread
@@ -721,7 +312,9 @@ class Market:
             self.egt_strategies, size=self.N_EGT_AGENTS_PER_STEP, p=self.egt_proportions
         )
         for strategy_name in sampled_agents:
-            egt_action, egt_price = self.get_egt_action(strategy_name, mid_price, momentum)
+            egt_action, egt_price = self.get_egt_action(
+                strategy_name, mid_price, momentum
+            )
             strat_idx = self.egt_strategies.index(strategy_name)
 
             if egt_action == "sell" and egt_price <= drl_bid_price:
@@ -730,14 +323,18 @@ class Market:
                 step_payoffs[strat_idx] += drl_bid_price
                 step_trades[strat_idx] += 1
                 drl_trades_this_step += 1
-                trade_profit_total += (mid_price - drl_bid_price)  # profit for buying under mid
+                trade_profit_total += (
+                    mid_price - drl_bid_price
+                )  # profit for buying under mid
             elif egt_action == "buy" and egt_price >= drl_ask_price:
                 self.drl_agent.inventory -= 1
                 self.drl_agent.cash += drl_ask_price
                 step_payoffs[strat_idx] -= drl_ask_price
                 step_trades[strat_idx] += 1
                 drl_trades_this_step += 1
-                trade_profit_total += (drl_ask_price - mid_price)  # profit for selling above mid
+                trade_profit_total += (
+                    drl_ask_price - mid_price
+                )  # profit for selling above mid
 
         self.egt_total_payoffs += step_payoffs
         self.egt_total_trades += step_trades
@@ -749,12 +346,16 @@ class Market:
 
         # Inventory penalties (weakened)
         reward -= 0.002 * abs(inv)
-        reward -= 0.0005 * (inv ** 2)
+        reward -= 0.0005 * (inv**2)
         reward -= drl_trades_this_step * self.transaction_cost_per_trade
 
         # Mean-reversion incentive (reward for reducing exposure)
         if abs(inv) > 0:
-            prev_inv = self.history["drl_inventory"][-1] if self.history["drl_inventory"] else 0
+            prev_inv = (
+                self.history["drl_inventory"][-1]
+                if self.history["drl_inventory"]
+                else 0
+            )
             if abs(inv) < abs(prev_inv):
                 reward += 0.003 * (abs(prev_inv) - abs(inv))
 
@@ -773,9 +374,18 @@ class Market:
         next_data_tuple = self.market_data.get_market_state(self.step + 1)
         next_price, next_vol, next_mom, next_norm_vol, next_rsi = next_data_tuple
         done = next_price is None
-        next_state = state if done else self.drl_agent.format_state(
-            inv, next_vol, next_mom, next_norm_vol, next_rsi,
-            self.step + 1, self.market_data.max_steps,
+        next_state = (
+            state
+            if done
+            else self.drl_agent.format_state(
+                inv,
+                next_vol,
+                next_mom,
+                next_norm_vol,
+                next_rsi,
+                self.step + 1,
+                self.market_data.max_steps,
+            )
         )
 
         self.drl_agent.remember(state, action_idx, reward, next_state, done)
@@ -800,9 +410,6 @@ class Market:
 
         self.step += 1
         return True
-
-
-
 
     def run_simulation(self):
         # (This method is unchanged)
@@ -831,259 +438,11 @@ class Market:
             print(f"  {strat.capitalize()}: {self.egt_proportions[i]:.3f}")
         print("=" * 30 + "\n")
 
-    # def plot_results(self):
-    #     # (This method is unchanged)
-    #     STD_FIGSIZE = (8, 6)
-    #     STD_DPI = 300
-    #     df_history = pd.DataFrame(self.history)
-    #     if df_history.empty:
-    #         print("History is empty, skipping plotting.")
-    #         return
-    #     print("PASS 1: Saving individual plot files...")
-    #     fig1, ax1 = plt.subplots(figsize=STD_FIGSIZE)
-    #     ax1.plot(
-    #         df_history["step"],
-    #         df_history["drl_profit"],
-    #         label="DRL Profit",
-    #         color="blue",
-    #     )
-    #     ax1.set_title("DRL Agent Cumulative Profit Over Time")
-    #     ax1.set_xlabel("Time Step")
-    #     ax1.set_ylabel("Total Profit ($)")
-    #     ax1.legend()
-    #     ax1.grid(True, alpha=0.3)
-    #     plt.tight_layout()
-    #     plt.savefig("plot_1_drl_profit.png", dpi=STD_DPI)
-    #     plt.close(fig1)
-    #     fig2, ax2 = plt.subplots(figsize=STD_FIGSIZE)
-    #     ax2.plot(
-    #         df_history["step"],
-    #         df_history["drl_inventory"],
-    #         label="DRL Inventory",
-    #         color="green",
-    #     )
-    #     ax2.axhline(
-    #         y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
-    #     )
-    #     ax2.set_title("DRL Agent Inventory Over Time")
-    #     ax2.set_xlabel("Time Step")
-    #     ax2.set_ylabel("Inventory (Units)")
-    #     ax2.legend()
-    #     ax2.grid(True, alpha=0.3)
-    #     plt.tight_layout()
-    #     plt.savefig("plot_2_drl_inventory.png", dpi=STD_DPI)
-    #     plt.close(fig2)
-    #     fig3, ax3 = plt.subplots(figsize=STD_FIGSIZE)
-    #     egt_labels = [s.capitalize() for s in self.egt_strategies]
-    #     egt_data = [df_history[f"egt_prop_{s}"] for s in self.egt_strategies]
-    #     ax3.stackplot(df_history["step"], egt_data, labels=egt_labels)
-    #     ax3.set_title("EGT Population Evolution (Replicator Dynamics)")
-    #     ax3.set_xlabel("Time Step")
-    #     ax3.set_ylabel("Proportion of Population")
-    #     ax3.set_ylim(0, 1)
-    #     ax3.legend(loc="upper left")
-    #     plt.tight_layout()
-    #     plt.savefig("plot_3_egt_dynamics.png", dpi=STD_DPI)
-    #     plt.close(fig3)
-    #     fig4, ax4 = plt.subplots(figsize=STD_FIGSIZE)
-    #     ax4.plot(
-    #         df_history["step"],
-    #         df_history["chosen_spread_width"],
-    #         label="Chosen Spread Width",
-    #         color="red",
-    #         alpha=0.6,
-    #     )
-    #     ax4.set_title("DRL Agent's Chosen Spread Width")
-    #     ax4.set_xlabel("Time Step")
-    #     ax4.set_ylabel("Spread Width ($)")
-    #     ax4.grid(True, alpha=0.3)
-    #     ax4_twin = ax4.twinx()
-    #     ax4_twin.plot(
-    #         df_history["step"],
-    #         df_history["epsilon"],
-    #         label="Epsilon",
-    #         color="grey",
-    #         linestyle=":",
-    #     )
-    #     ax4_twin.set_ylabel("Epsilon")
-    #     lines, labels = ax4.get_legend_handles_labels()
-    #     lines2, labels2 = ax4_twin.get_legend_handles_labels()
-    #     ax4.legend(lines + lines2, labels + labels2, loc="upper right")
-    #     plt.tight_layout()
-    #     plt.savefig("plot_4_drl_spread.png", dpi=STD_DPI)
-    #     plt.close(fig4)
-    #     fig5, ax5 = plt.subplots(figsize=STD_FIGSIZE)
-    #     df_history["rolling_avg_reward"] = (
-    #         df_history["reward"].rolling(window=100, min_periods=1).mean()
-    #     )
-    #     ax5.plot(
-    #         df_history["step"],
-    #         df_history["rolling_avg_reward"],
-    #         label="Rolling Avg. Reward (100 steps)",
-    #         color="purple",
-    #     )
-    #     ax5.axhline(y=0, color="black", linestyle="--", linewidth=1)
-    #     ax5.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
-    #     ax5.set_xlabel("Time Step")
-    #     ax5.set_ylabel("Average Reward")
-    #     ax5.legend()
-    #     ax5.grid(True, alpha=0.3)
-    #     plt.tight_layout()
-    #     plt.savefig("plot_5_rolling_reward.png", dpi=STD_DPI)
-    #     plt.close(fig5)
-    #     fig6, ax6 = plt.subplots(figsize=STD_FIGSIZE)
-    #     halfway_idx = len(df_history["step"]) // 2
-    #     exploiting_spreads = df_history["chosen_spread_width"].iloc[halfway_idx:]
-    #     if not exploiting_spreads.empty:
-    #         spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
-    #         spread_dist = spread_counts / len(exploiting_spreads)
-    #         spread_dist.plot(kind="bar", ax=ax6, color="teal")
-    #         ax6.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
-    #     else:
-    #         ax6.set_title("DRL Learned Policy (No data)")
-    #     ax6.set_xlabel("Chosen Spread Width ($)")
-    #     ax6.set_ylabel("Proportion of Actions")
-    #     ax6.set_ylim(0, 1)
-    #     ax6.tick_params(axis="x", rotation=0)
-    #     ax6.grid(axis="y", linestyle="--", alpha=0.5)
-    #     plt.tight_layout()
-    #     plt.savefig("plot_6_policy_dist.png", dpi=STD_DPI)
-    #     plt.close(fig6)
-    #     print(f"Successfully saved 6 plots (e.g., 'plot_1_drl_profit.png').")
-    #     print("PASS 2: Generating combined plot window...")
-    #     fig_display, axes = plt.subplots(3, 2, figsize=(16, 15))
-    #     fig_display.suptitle("DRL Agent vs EGT Population Simulation", fontsize=16)
-    #     ax_0_0 = axes[0, 0]
-    #     ax_0_0.plot(
-    #         df_history["step"],
-    #         df_history["drl_profit"],
-    #         label="DRL Profit",
-    #         color="blue",
-    #     )
-    #     ax_0_0.set_title("DRL Agent Cumulative Profit Over Time")
-    #     ax_0_0.set_xlabel("Time Step")
-    #     ax_0_0.set_ylabel("Total Profit ($)")
-    #     ax_0_0.legend()
-    #     ax_0_0.grid(True, alpha=0.3)
-    #     ax_0_1 = axes[0, 1]
-    #     ax_0_1.plot(
-    #         df_history["step"],
-    #         df_history["drl_inventory"],
-    #         label="DRL Inventory",
-    #         color="green",
-    #     )
-    #     ax_0_1.axhline(
-    #         y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
-    #     )
-    #     ax_0_1.set_title("DRL Agent Inventory Over Time")
-    #     ax_0_1.set_xlabel("Time Step")
-    #     ax_0_1.set_ylabel("Inventory (Units)")
-    #     ax_0_1.legend()
-    #     ax_0_1.grid(True, alpha=0.3)
-    #     ax_1_0 = axes[1, 0]
-    #     ax_1_0.stackplot(df_history["step"], egt_data, labels=egt_labels)
-    #     ax_1_0.set_title("EGT Population Evolution (Replicator Dynamics)")
-    #     ax_1_0.set_xlabel("Time Step")
-    #     ax_1_0.set_ylabel("Proportion of Population")
-    #     ax_1_0.set_ylim(0, 1)
-    #     ax_1_0.legend(loc="upper left")
-    #     ax_1_1 = axes[1, 1]
-    #     ax_1_1.plot(
-    #         df_history["step"],
-    #         df_history["chosen_spread_width"],
-    #         label="Chosen Spread Width",
-    #         color="red",
-    #         alpha=0.6,
-    #     )
-    #     ax_1_1.set_title("DRL Agent's Chosen Spread Width")
-    #     ax_1_1.set_xlabel("Time Step")
-    #     ax_1_1.set_ylabel("Spread Width ($)")
-    #     ax_1_1.grid(True, alpha=0.3)
-    #     ax_1_1_twin = ax_1_1.twinx()
-    #     ax_1_1_twin.plot(
-    #         df_history["step"],
-    #         df_history["epsilon"],
-    #         label="Epsilon",
-    #         color="grey",
-    #         linestyle=":",
-    #     )
-    #     ax_1_1_twin.set_ylabel("Epsilon")
-    #     lines, labels = ax_1_1.get_legend_handles_labels()
-    #     lines2, labels2 = ax_1_1_twin.get_legend_handles_labels()
-    #     ax_1_1.legend(lines + lines2, labels + labels2, loc="upper right")
-    #     ax_2_0 = axes[2, 0]
-    #     ax_2_0.plot(
-    #         df_history["step"],
-    #         df_history["rolling_avg_reward"],
-    #         label="Rolling Avg. Reward (100 steps)",
-    #         color="purple",
-    #     )
-    #     ax_2_0.axhline(y=0, color="black", linestyle="--", linewidth=1)
-    #     ax_2_0.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
-    #     ax_2_0.set_xlabel("Time Step")
-    #     ax_2_0.set_ylabel("Average Reward")
-    #     ax_2_0.legend()
-    #     ax_2_0.grid(True, alpha=0.3)
-    #     ax_2_1 = axes[2, 1]
-    #     if not exploiting_spreads.empty:
-    #         spread_counts = pd.Series(exploiting_spreads).value_counts().sort_index()
-    #         spread_dist = spread_counts / len(exploiting_spreads)
-    #         spread_dist.plot(kind="bar", ax=ax_2_1, color="teal")
-    #         ax_2_1.set_title(
-    #             f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)"
-    #         )
-    #     else:
-    #         ax_2_1.set_title("DRL Learned Policy (No data)")
-    #     ax_2_1.set_xlabel("Chosen Spread Width ($)")
-    #     ax_2_1.set_ylabel("Proportion of Actions")
-    #     ax_2_1.set_ylim(0, 1)
-    #     ax_2_1.tick_params(axis="x", rotation=0)
-    #     ax_2_1.grid(axis="y", linestyle="--", alpha=0.5)
-    #     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    #     plt.savefig("plot_0_combined_summary.png", dpi=STD_DPI)
-    #     print("Displaying combined plot window...")
-
-
-
-
-    #     # --- NEW: DRL–EGT Dependency Graph ---
-    #     fig_dep, ax_dep = plt.subplots(figsize=STD_FIGSIZE)
-    #     df_history["egt_avg"] = df_history[
-    #         [f"egt_prop_{s}" for s in self.egt_strategies]
-    #     ].mean(axis=1)
-
-    #     # Use correlation between DRL profit changes and EGT shifts as dependency metric
-    #     df_history["drl_profit_change"] = df_history["drl_profit"].diff().fillna(0)
-    #     df_history["egt_change"] = df_history["egt_avg"].diff().fillna(0)
-    #     rolling_corr = (
-    #         df_history["drl_profit_change"]
-    #         .rolling(window=100, min_periods=10)
-    #         .corr(df_history["egt_change"])
-    #     )
-
-    #     ax_dep.plot(
-    #         df_history["step"],
-    #         rolling_corr,
-    #         color="darkorange",
-    #         label="Rolling Correlation (DRL Profit vs EGT Change)",
-    #     )
-    #     ax_dep.axhline(y=0, color="black", linestyle="--", linewidth=1)
-    #     ax_dep.set_title("Dependency of DRL Agent on EGT Population")
-    #     ax_dep.set_xlabel("Time Step")
-    #     ax_dep.set_ylabel("Rolling Correlation")
-    #     ax_dep.legend()
-    #     ax_dep.grid(True, alpha=0.3)
-    #     plt.tight_layout()
-    #     plt.savefig("plot_7_drl_egt_dependency.png", dpi=STD_DPI)
-    #     plt.close(fig_dep)
-
-
-
-
-    #     plt.show()
-
-
     def plot_results(self):
+        import matplotlib.cm as cm
+        import matplotlib.colors as mcolors
+        import numpy as np
+
         STD_FIGSIZE = (8, 6)
         STD_DPI = 300
         df_history = pd.DataFrame(self.history)
@@ -1095,7 +454,12 @@ class Market:
 
         # --- Plot 1: DRL Profit ---
         fig1, ax1 = plt.subplots(figsize=STD_FIGSIZE)
-        ax1.plot(df_history["step"], df_history["drl_profit"], label="DRL Profit", color="blue")
+        ax1.plot(
+            df_history["step"],
+            df_history["drl_profit"],
+            label="DRL Profit",
+            color="blue",
+        )
         ax1.set_title("DRL Agent Cumulative Profit Over Time")
         ax1.set_xlabel("Time Step")
         ax1.set_ylabel("Total Profit ($)")
@@ -1107,8 +471,15 @@ class Market:
 
         # --- Plot 2: DRL Inventory ---
         fig2, ax2 = plt.subplots(figsize=STD_FIGSIZE)
-        ax2.plot(df_history["step"], df_history["drl_inventory"], label="DRL Inventory", color="green")
-        ax2.axhline(y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)")
+        ax2.plot(
+            df_history["step"],
+            df_history["drl_inventory"],
+            label="DRL Inventory",
+            color="green",
+        )
+        ax2.axhline(
+            y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
+        )
         ax2.set_title("DRL Agent Inventory Over Time")
         ax2.set_xlabel("Time Step")
         ax2.set_ylabel("Inventory (Units)")
@@ -1134,13 +505,25 @@ class Market:
 
         # --- Plot 4: Spread Width + Epsilon ---
         fig4, ax4 = plt.subplots(figsize=STD_FIGSIZE)
-        ax4.plot(df_history["step"], df_history["chosen_spread_width"], label="Chosen Spread Width", color="red", alpha=0.6)
+        ax4.plot(
+            df_history["step"],
+            df_history["chosen_spread_width"],
+            label="Chosen Spread Width",
+            color="red",
+            alpha=0.6,
+        )
         ax4.set_title("DRL Agent's Chosen Spread Width")
         ax4.set_xlabel("Time Step")
         ax4.set_ylabel("Spread Width ($)")
         ax4.grid(True, alpha=0.3)
         ax4_twin = ax4.twinx()
-        ax4_twin.plot(df_history["step"], df_history["epsilon"], label="Epsilon", color="grey", linestyle=":")
+        ax4_twin.plot(
+            df_history["step"],
+            df_history["epsilon"],
+            label="Epsilon",
+            color="grey",
+            linestyle=":",
+        )
         ax4_twin.set_ylabel("Epsilon")
         lines, labels = ax4.get_legend_handles_labels()
         lines2, labels2 = ax4_twin.get_legend_handles_labels()
@@ -1151,8 +534,15 @@ class Market:
 
         # --- Plot 5: Rolling Average Reward ---
         fig5, ax5 = plt.subplots(figsize=STD_FIGSIZE)
-        df_history["rolling_avg_reward"] = df_history["reward"].rolling(window=100, min_periods=1).mean()
-        ax5.plot(df_history["step"], df_history["rolling_avg_reward"], label="Rolling Avg. Reward (100 steps)", color="purple")
+        df_history["rolling_avg_reward"] = (
+            df_history["reward"].rolling(window=100, min_periods=1).mean()
+        )
+        ax5.plot(
+            df_history["step"],
+            df_history["rolling_avg_reward"],
+            label="Rolling Avg. Reward (100 steps)",
+            color="purple",
+        )
         ax5.axhline(y=0, color="black", linestyle="--", linewidth=1)
         ax5.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
         ax5.set_xlabel("Time Step")
@@ -1163,26 +553,48 @@ class Market:
         plt.savefig("plot_5_rolling_reward.png", dpi=STD_DPI)
         plt.close(fig5)
 
-        # --- Plot 6: Policy Distribution (CLEANED UP) ---
+        # --- Plot 6: Policy Distribution (discrete log-scaled colorbar) ---
         fig6, ax6 = plt.subplots(figsize=STD_FIGSIZE)
         halfway_idx = len(df_history["step"]) // 2
         exploiting_spreads = df_history["chosen_spread_width"].iloc[halfway_idx:]
 
         if not exploiting_spreads.empty:
-            # ✅ Round spread widths to clean up x-axis clutter
             spread_widths_rounded = exploiting_spreads.round(2)
             spread_counts = spread_widths_rounded.value_counts().sort_index()
             spread_dist = spread_counts / len(spread_widths_rounded)
 
-            spread_dist.plot(kind="bar", ax=ax6, color="teal")
+            # ✅ Log normalization + consistent color range
+            global_min, global_max = 0.001, 0.4
+            norm = mcolors.LogNorm(vmin=global_min, vmax=global_max)
+            colors = [cm.viridis(norm(v)) for v in spread_dist]
+
+            bars = spread_dist.plot(kind="bar", ax=ax6, color=colors)
             ax6.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
             ax6.set_xlabel("Chosen Spread Width ($)")
             ax6.set_ylabel("Proportion of Actions")
             ax6.set_ylim(0, 1)
-
-            # ✅ Make x-axis clean and readable
             ax6.set_xticklabels(spread_dist.index, rotation=0)
             ax6.grid(axis="y", linestyle="--", alpha=0.5)
+
+            # Percentage labels above bars
+            for bar, val in zip(bars.patches, spread_dist):
+                ax6.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    val + 0.01,
+                    f"{val * 100:.1f}%",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                )
+
+            # ✅ Discrete log ticks for colorbar
+            sm = cm.ScalarMappable(cmap=cm.viridis, norm=norm)
+            sm.set_array([])
+            cbar = fig6.colorbar(sm, ax=ax6)
+            ticks = [0.001, 0.01, 0.05, 0.1, 0.2, 0.4]
+            cbar.set_ticks(ticks)
+            cbar.set_ticklabels([f"{t*100:.1f}%" for t in ticks])
+            cbar.set_label("Relative Frequency (log scale)", rotation=270, labelpad=15)
         else:
             ax6.set_title("DRL Learned Policy (No data)")
 
@@ -1190,7 +602,7 @@ class Market:
         plt.savefig("plot_6_policy_dist.png", dpi=STD_DPI)
         plt.close(fig6)
 
-        print("Successfully saved 6 plots (e.g., 'plot_1_drl_profit.png').")
+        print("Successfully saved 6 plots.")
         print("PASS 2: Generating combined plot window...")
 
         # --- Combined Summary Display ---
@@ -1198,74 +610,137 @@ class Market:
         fig_display.suptitle("DRL Agent vs EGT Population Simulation", fontsize=16)
 
         # Row 1
-        ax_0_0 = axes[0, 0]
-        ax_0_0.plot(df_history["step"], df_history["drl_profit"], label="DRL Profit", color="blue")
-        ax_0_0.set_title("DRL Agent Cumulative Profit Over Time")
-        ax_0_0.set_xlabel("Time Step")
-        ax_0_0.set_ylabel("Total Profit ($)")
-        ax_0_0.legend()
-        ax_0_0.grid(True, alpha=0.3)
+        axes[0, 0].plot(
+            df_history["step"],
+            df_history["drl_profit"],
+            label="DRL Profit",
+            color="blue",
+        )
+        axes[0, 0].set_title("DRL Agent Cumulative Profit Over Time")
+        axes[0, 0].set_xlabel("Time Step")
+        axes[0, 0].set_ylabel("Total Profit ($)")
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
 
-        ax_0_1 = axes[0, 1]
-        ax_0_1.plot(df_history["step"], df_history["drl_inventory"], label="DRL Inventory", color="green")
-        ax_0_1.axhline(y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)")
-        ax_0_1.set_title("DRL Agent Inventory Over Time")
-        ax_0_1.set_xlabel("Time Step")
-        ax_0_1.set_ylabel("Inventory (Units)")
-        ax_0_1.legend()
-        ax_0_1.grid(True, alpha=0.3)
+        axes[0, 1].plot(
+            df_history["step"],
+            df_history["drl_inventory"],
+            label="DRL Inventory",
+            color="green",
+        )
+        axes[0, 1].axhline(
+            y=0, color="black", linestyle="--", linewidth=1, label="Neutral (0)"
+        )
+        axes[0, 1].set_title("DRL Agent Inventory Over Time")
+        axes[0, 1].set_xlabel("Time Step")
+        axes[0, 1].set_ylabel("Inventory (Units)")
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
 
         # Row 2
-        ax_1_0 = axes[1, 0]
-        ax_1_0.stackplot(df_history["step"], egt_data, labels=egt_labels)
-        ax_1_0.set_title("EGT Population Evolution (Replicator Dynamics)")
-        ax_1_0.set_xlabel("Time Step")
-        ax_1_0.set_ylabel("Proportion of Population")
-        ax_1_0.set_ylim(0, 1)
-        ax_1_0.legend(loc="upper left")
+        axes[1, 0].stackplot(df_history["step"], egt_data, labels=egt_labels)
+        axes[1, 0].set_title("EGT Population Evolution (Replicator Dynamics)")
+        axes[1, 0].set_xlabel("Time Step")
+        axes[1, 0].set_ylabel("Proportion of Population")
+        axes[1, 0].set_ylim(0, 1)
+        axes[1, 0].legend(loc="upper left")
 
-        ax_1_1 = axes[1, 1]
-        ax_1_1.plot(df_history["step"], df_history["chosen_spread_width"], label="Chosen Spread Width", color="red", alpha=0.6)
-        ax_1_1_twin = ax_1_1.twinx()
-        ax_1_1_twin.plot(df_history["step"], df_history["epsilon"], label="Epsilon", color="grey", linestyle=":")
-        ax_1_1.set_title("DRL Agent's Chosen Spread Width")
-        ax_1_1.set_xlabel("Time Step")
-        ax_1_1.set_ylabel("Spread Width ($)")
-        ax_1_1_twin.set_ylabel("Epsilon")
-        lines, labels = ax_1_1.get_legend_handles_labels()
-        lines2, labels2 = ax_1_1_twin.get_legend_handles_labels()
-        ax_1_1.legend(lines + lines2, labels + labels2, loc="upper right")
-        ax_1_1.grid(True, alpha=0.3)
+        ax_spread = axes[1, 1]
+        ax_spread.plot(
+            df_history["step"],
+            df_history["chosen_spread_width"],
+            label="Chosen Spread Width",
+            color="red",
+            alpha=0.6,
+        )
+        ax_twin = ax_spread.twinx()
+        ax_twin.plot(
+            df_history["step"],
+            df_history["epsilon"],
+            label="Epsilon",
+            color="grey",
+            linestyle=":",
+        )
+        ax_spread.set_title("DRL Agent's Chosen Spread Width")
+        ax_spread.set_xlabel("Time Step")
+        ax_spread.set_ylabel("Spread Width ($)")
+        ax_twin.set_ylabel("Epsilon")
+        lines, labels = ax_spread.get_legend_handles_labels()
+        lines2, labels2 = ax_twin.get_legend_handles_labels()
+        ax_spread.legend(lines + lines2, labels + labels2, loc="upper right")
+        ax_spread.grid(True, alpha=0.3)
 
         # Row 3
-        ax_2_0 = axes[2, 0]
-        ax_2_0.plot(df_history["step"], df_history["rolling_avg_reward"], label="Rolling Avg. Reward (100 steps)", color="purple")
-        ax_2_0.axhline(y=0, color="black", linestyle="--", linewidth=1)
-        ax_2_0.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
-        ax_2_0.set_xlabel("Time Step")
-        ax_2_0.set_ylabel("Average Reward")
-        ax_2_0.legend()
-        ax_2_0.grid(True, alpha=0.3)
+        axes[2, 0].plot(
+            df_history["step"],
+            df_history["rolling_avg_reward"],
+            label="Rolling Avg. Reward (100 steps)",
+            color="purple",
+        )
+        axes[2, 0].axhline(y=0, color="black", linestyle="--", linewidth=1)
+        axes[2, 0].set_title("DRL Agent's Progressive Learning (Rolling Reward)")
+        axes[2, 0].set_xlabel("Time Step")
+        axes[2, 0].set_ylabel("Average Reward")
+        axes[2, 0].legend()
+        axes[2, 0].grid(True, alpha=0.3)
 
-        ax_2_1 = axes[2, 1]
+        ax_policy = axes[2, 1]
         if not exploiting_spreads.empty:
-            spread_dist.plot(kind="bar", ax=ax_2_1, color="teal")
-            ax_2_1.set_title(f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)")
-            ax_2_1.set_xlabel("Chosen Spread Width ($)")
-            ax_2_1.set_ylabel("Proportion of Actions")
-            ax_2_1.set_ylim(0, 1)
-            ax_2_1.set_xticklabels(spread_dist.index, rotation=0)
-            ax_2_1.grid(axis="y", linestyle="--", alpha=0.5)
-        else:
-            ax_2_1.set_title("DRL Learned Policy (No data)")
+            bars = spread_dist.plot(kind="bar", ax=ax_policy, color=colors)
+            ax_policy.set_title(
+                f"DRL Learned Policy (Last {len(exploiting_spreads)} Steps)"
+            )
+            ax_policy.set_xlabel("Chosen Spread Width ($)")
+            ax_policy.set_ylabel("Proportion of Actions")
+            ax_policy.set_ylim(0, 1)
+            ax_policy.set_xticklabels(spread_dist.index, rotation=0)
+            ax_policy.grid(axis="y", linestyle="--", alpha=0.5)
+            for bar, val in zip(bars.patches, spread_dist):
+                ax_policy.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    val + 0.01,
+                    f"{val * 100:.1f}%",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                )
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.savefig("plot_0_combined_summary.png", dpi=STD_DPI)
         print("Displaying combined plot window...")
+
+        # --- NEW: DRL–EGT Dependency Graph ---
+        fig_dep, ax_dep = plt.subplots(figsize=STD_FIGSIZE)
+        df_history["egt_avg"] = df_history[
+            [f"egt_prop_{s}" for s in self.egt_strategies]
+        ].mean(axis=1)
+
+        # Use correlation between DRL profit changes and EGT shifts as dependency metric
+        df_history["drl_profit_change"] = df_history["drl_profit"].diff().fillna(0)
+        df_history["egt_change"] = df_history["egt_avg"].diff().fillna(0)
+        rolling_corr = (
+            df_history["drl_profit_change"]
+            .rolling(window=100, min_periods=10)
+            .corr(df_history["egt_change"])
+        )
+
+        ax_dep.plot(
+            df_history["step"],
+            rolling_corr,
+            color="darkorange",
+            label="Rolling Correlation (DRL Profit vs EGT Change)",
+        )
+        ax_dep.axhline(y=0, color="black", linestyle="--", linewidth=1)
+        ax_dep.set_title("Dependency of DRL Agent on EGT Population")
+        ax_dep.set_xlabel("Time Step")
+        ax_dep.set_ylabel("Rolling Correlation")
+        ax_dep.legend()
+        ax_dep.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig("plot_7_drl_egt_dependency.png", dpi=STD_DPI)
+        plt.close(fig_dep)
+
         plt.show()
-
-
-
 
 
 if __name__ == "__main__":
@@ -1313,4 +788,4 @@ if __name__ == "__main__":
 
         traceback.print_exc()
 
-# fixed x axis clutter on spread policy chart
+# same as v5 but without all the unnecessary comments and stuff
