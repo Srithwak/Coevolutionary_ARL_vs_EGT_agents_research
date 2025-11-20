@@ -1,0 +1,30 @@
+==============================
+=== FINAL RESULTS ===
+Starting Capital: $100,000.00
+Final Portfolio Value: $101,486.44
+Total Return: 1.49%
+
+Sharpe (per-step signal/noise): 0.436
+Sharpe (annualized): 49.761
+Sortino (annualized): 50.164
+
+Max Drawdown: -0.03%
+
+--- Advanced Metrics ---
+Alpha (Annualized): 0.0981
+Beta (vs Market): 0.0008
+Win Rate: 78.25%
+Profit Factor: 5.25
+
+--- Step Return Distribution ---
+Mean Return per Step: 0.000008
+Std Dev of Return per Step: 0.000017
+Skewness of Returns: 3.575089
+Kurtosis of Returns: 210.660751
+
+Final EGT Population Distribution:
+  Aggressive: 0.002
+  Passive: 0.994
+  Random: 0.001
+  Momentum: 0.003
+==============================
