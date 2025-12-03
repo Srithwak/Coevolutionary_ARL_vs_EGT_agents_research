@@ -103,4 +103,3 @@ def plot_market_data(folder_name='market_data'):
 if __name__ == "__main__":
     plot_market_data()
     print("Script finished.")
-
