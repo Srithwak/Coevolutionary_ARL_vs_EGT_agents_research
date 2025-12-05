@@ -43,12 +43,18 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
+import yaml
+import argparse
+
 # Suppress TensorFlow warnings
 tf.get_logger().setLevel("ERROR")
 
-DATA_FOLDER = "market_data/"
-DATA_FILE = "nvda_up-stable.csv"
-RESULTS_FOLDER = "results/"
+def load_config(config_path="config.yaml"):
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f)
+
+# Global config placeholder - will be loaded in main
+CONFIG = {}
 
 
 class MarketData:
@@ -56,13 +62,13 @@ class MarketData:
     Loads, processes, and provides real OHLCV market data.
     """
 
-    def __init__(
-        self,
-        ohlcv_filename,
-        volatility_window=20,
-        momentum_window=5,
-        rsi_window=14,
-    ):
+    def __init__(self, ohlcv_filename, config):
+        self.filename = ohlcv_filename
+        self.config = config
+        
+        volatility_window = self.config["features"]["volatility_window"]
+        momentum_window = self.config["features"]["momentum_window"]
+        rsi_window = self.config["features"]["rsi_window"]
         self.filename = ohlcv_filename
         if not os.path.exists(self.filename):
             print(f"Error: Data file not found at '{self.filename}'")
@@ -143,36 +149,28 @@ class DQNAgent:
     Chooses spreads to quote and accumulates cash/inventory.
     """
 
-    def __init__(self, state_size, action_size, nn_architecture, drl_params):
+    def __init__(self, state_size, action_size, config):
         self.state_size = state_size
-        # (bid_spread, ask_spread) action choices
-        self.actions = [(0.1, 0.1), (0.2, 0.2), (0.4, 0.4), (0.3, 0.1), (0.1, 0.3)]
+        self.config = config
+        
+        # Load actions from config
+        self.actions = [tuple(a) for a in self.config["agent"]["actions"]]
         self.action_size = action_size
 
         # portfolio state
         self.inventory = 0
         self.cash = 0.0  # will be overwritten by Market with INITIAL_CAPITAL
 
-        default_params = {
-            "gamma": 0.95,
-            "epsilon": 1.0,
-            "epsilon_decay": 0.995,
-            "epsilon_min": 0.01,
-            "learning_rate": 0.001,
-            "replay_buffer_maxlen": 2000,
-            "batch_size": 32,
-        }
-        self.drl_params = default_params
-        self.drl_params.update(drl_params or {})
-
-        self.replay_buffer = deque(maxlen=self.drl_params["replay_buffer_maxlen"])
-        self.gamma = self.drl_params["gamma"]
-        self.epsilon = self.drl_params["epsilon"]
-        self.epsilon_decay = self.drl_params["epsilon_decay"]
-        self.epsilon_min = self.drl_params["epsilon_min"]
-        self.learning_rate = self.drl_params["learning_rate"]
-        self.batch_size = self.drl_params["batch_size"]
-        self.nn_architecture = nn_architecture
+        agent_params = self.config["agent"]
+        self.gamma = agent_params["gamma"]
+        self.epsilon = agent_params["epsilon_start"]
+        self.epsilon_decay = agent_params["epsilon_decay"]
+        self.epsilon_min = agent_params["epsilon_min"]
+        self.learning_rate = agent_params["learning_rate"]
+        self.batch_size = agent_params["batch_size"]
+        self.replay_buffer = deque(maxlen=agent_params["replay_buffer_maxlen"])
+        
+        self.nn_architecture = agent_params["nn_architecture"]
 
         self.model = self._build_model()
         self.target_model = self._build_model()
@@ -255,36 +253,39 @@ class Market:
     - Real price path via provided OHLCV
     """
 
-    def __init__(self, nn_architecture, drl_params, ohlcv_filename):
-        self.market_data = MarketData(ohlcv_filename=ohlcv_filename)
+    def __init__(self, config):
+        self.config = config
+        
+        data_path = os.path.join(self.config["data"]["folder"], self.config["data"]["file"])
+        self.market_data = MarketData(ohlcv_filename=data_path, config=self.config)
         self.step = 0
 
         self.state_size = 6
-        self.action_size = 5
+        self.action_size = len(self.config["agent"]["actions"])
+        
         self.drl_agent = DQNAgent(
             state_size=self.state_size,
             action_size=self.action_size,
-            nn_architecture=nn_architecture,
-            drl_params=drl_params,
+            config=self.config
         )
 
         # --- NEW: Assign starting capital to agent
-        self.INITIAL_CAPITAL = 100000.0
+        self.INITIAL_CAPITAL = self.config["market"]["initial_capital"]
         self.drl_agent.cash = self.INITIAL_CAPITAL
 
         # target update cadence
-        self.UPDATE_TARGET_EVERY = 20
+        self.UPDATE_TARGET_EVERY = self.config["market"]["update_target_every"]
 
         # EGT population setup
-        self.egt_strategies = ["aggressive", "passive", "random", "momentum"]
-        self.egt_proportions = np.array([0.25, 0.25, 0.25, 0.25])
+        self.egt_strategies = self.config["market"]["egt_strategies"]
+        self.egt_proportions = np.array(self.config["market"]["egt_proportions"])
         self.egt_total_payoffs = np.zeros(len(self.egt_strategies))
         self.egt_total_trades = np.zeros(len(self.egt_strategies))
-        self.N_EGT_AGENTS_PER_STEP = 15
-        self.EVOLVE_EVERY = 50
+        self.N_EGT_AGENTS_PER_STEP = self.config["market"]["n_egt_agents_per_step"]
+        self.EVOLVE_EVERY = self.config["market"]["evolve_every"]
 
         # cost & behavior knobs
-        self.transaction_cost_per_trade = 0.01
+        self.transaction_cost_per_trade = self.config["market"]["transaction_cost_per_trade"]
 
         # logging for analysis and plotting
         self.history = {
@@ -635,9 +636,9 @@ class Market:
 
         # Create results subfolder
         # Remove extension from filename for cleaner folder name
-        data_name = DATA_FILE.replace(".csv", "")
+        data_name = self.config["data"]["file"].replace(".csv", "")
         folder_name = f"{data_name}_SEED{SEED}"
-        save_dir = os.path.join(RESULTS_FOLDER, folder_name)
+        save_dir = os.path.join(self.config["data"]["results_folder"], folder_name)
         
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -664,6 +665,26 @@ class Market:
         plt.tight_layout()
         plt.savefig(os.path.join(save_dir, "plot_1_portfolio_value.png"), dpi=STD_DPI)
         plt.close(fig1)
+
+        # -------------------------------------------------
+        # Plot 0: Market Data (Mid Price)
+        # -------------------------------------------------
+        fig0, ax0 = plt.subplots(figsize=STD_FIGSIZE)
+        ax0.plot(
+            df_history["step"],
+            df_history["mid_price"],
+            label="Market Mid Price ($)",
+            color="black",
+            alpha=0.7,
+        )
+        ax0.set_title(f"Market Data: {data_name}")
+        ax0.set_xlabel("Time Step")
+        ax0.set_ylabel("Price ($)")
+        ax0.grid(True, alpha=0.3)
+        ax0.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "plot_0_market_data.png"), dpi=STD_DPI)
+        plt.close(fig0)
 
         # -------------------------------------------------
         # Plot 2: Inventory Distribution Heatmap (formerly plot 8)
@@ -867,7 +888,7 @@ class Market:
             ax6.set_xlabel("Chosen Spread Width ($)")
             ax6.set_ylabel("Proportion of Actions")
             ax6.set_ylim(0, 1)
-            ax6.set_xticklabels(spread_dist.index, rotation=0)
+            ax6.set_xticklabels(spread_dist.index, rotation=45)
             ax6.grid(axis="y", linestyle="--", alpha=0.5)
 
             # label bars with %
@@ -937,39 +958,25 @@ class Market:
 # main
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
-    SEED = 69
-    # SEED = 42
+    parser = argparse.ArgumentParser(description="Run DRL vs EGT Simulation")
+    parser.add_argument("--config", type=str, default="config.yaml", help="Path to configuration file")
+    args = parser.parse_args()
+
+    CONFIG = load_config(args.config)
+    
+    SEED = CONFIG["seed"]
     print(f"Setting global random seed to: {SEED}")
     random.seed(SEED)
     np.random.seed(SEED)
     tf.random.set_seed(SEED)
 
-
-    drl_params = {
-        "gamma": 0.95,
-        "epsilon_decay": 0.995,
-        "learning_rate": 0.0005,
-        "replay_buffer_maxlen": 20000,
-        "batch_size": 32,
-        "epsilon_min": 0.01,
-    }
-
-    nn_architecture = [
-        {"units": 64, "activation": "relu"},
-        {"units": 64, "activation": "relu"},
-    ]
-
-    print(f"Running simulation with data file: {DATA_FOLDER + DATA_FILE}")
+    print(f"Running simulation with config: {args.config}")
     try:
-        market_sim = Market(
-            nn_architecture=nn_architecture,
-            drl_params=drl_params,
-            ohlcv_filename=DATA_FOLDER + DATA_FILE,
-        )
+        market_sim = Market(config=CONFIG)
         market_sim.run_simulation()
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         print("\n--- ERROR ---")
-        print(f"Could not find data file: '{DATA_FOLDER}{DATA_FILE}'.")
+        print(f"File not found: {e}")
         print(
             "Please download a real OHLCV data file and update the DATA_FILE variable."
         )

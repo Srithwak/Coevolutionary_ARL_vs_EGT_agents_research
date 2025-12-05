@@ -1,0 +1,48 @@
+# Global Seed
+seed: 0
+
+# Data Paths
+data:
+  folder: "market_data/"
+  file: "nflx_down-steep.csv"
+  results_folder: "results/"
+
+# Market Data Features
+features:
+  volatility_window: 20
+  momentum_window: 5
+  rsi_window: 14
+
+# DRL Agent Parameters
+agent:
+  gamma: 0.95
+  epsilon_start: 1.0
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+  learning_rate: 0.0005
+  replay_buffer_maxlen: 20000
+  batch_size: 32
+  nn_architecture:
+    - units: 64
+      activation: "relu"
+    - units: 64
+      activation: "relu"
+  # (bid_spread, ask_spread)
+  actions:
+    - [0.1, 0.1]
+    - [0.2, 0.2]
+    - [0.4, 0.4]
+    - [0.3, 0.1]
+    - [0.1, 0.3]
+
+# Market Environment Parameters
+market:
+  initial_capital: 100000.0
+  transaction_cost_per_trade: 0.01
+  update_target_every: 20
+  
+  # EGT Population
+  egt_strategies: ["aggressive", "passive", "random", "momentum"]
+  egt_proportions: [0.25, 0.25, 0.25, 0.25]
+  n_egt_agents_per_step: 15
+  evolve_every: 50
