@@ -865,6 +865,15 @@ class Market:
         )
         ax5.axhline(y=0, color="black", linestyle="--", linewidth=1)
         ax5.set_title("DRL Agent's Progressive Learning (Rolling Reward)")
+        ax5.set_xlabel("Time Step")
+        ax5.set_ylabel("Average Reward")
+        ax5.grid(True, alpha=0.3)
+        ax5.legend()
+        plt.tight_layout()
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "plot_5_rolling_reward.png"), dpi=STD_DPI)
+        plt.close(fig5)
+
         halfway_idx = len(df_history["step"]) // 2
         exploiting_spreads = df_history["chosen_spread_width"].iloc[halfway_idx:]
 

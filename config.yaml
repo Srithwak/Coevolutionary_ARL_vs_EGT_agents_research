@@ -1,10 +1,10 @@
 # Global Seed
-seed: 0
+seed: 42
 
 # Data Paths
 data:
   folder: "market_data/"
-  file: "nflx_down-steep.csv"
+  file: "nvda_up-stable.csv"
   results_folder: "results/"
 
 # Market Data Features
