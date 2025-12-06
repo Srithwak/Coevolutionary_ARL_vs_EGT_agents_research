@@ -74,7 +74,7 @@ As you can see, the ARL agent **transformed the market**. When a population didn
 ## Slide 11: Results - Strategy
 
 The top image shows the chosen spread width, and how many times the agent chose it.
-The agent tried different spread widths before deciding on 0.4 to make the most profit.
+The graph shows us that its learned policy favors a narrow band of spreads over all other options.
 The bottom image models the spread width as a function of time.
 The gray line shows how often the agent acts to learn/explore. At first, its closer to 1, but as time passes it gets to 0, showing that its not acting randomly, but on what it has learnt.
 When compared to the market data, we can see that when the agent wants to trade, there are small spikes, and there are big spikes when there is a crash in the market, showing that the agent is actively trying to stop itself from being exploited.
