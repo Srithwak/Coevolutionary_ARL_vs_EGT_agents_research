@@ -71,10 +71,9 @@ So, here is what a single moment in the simulation looks like:
 5. **Evolution**: If it's time, the weak bots are culled and new ones are born.
 6. **Learn**: Our AI thinks, "Did that go well?" and updates its brain for the next round.
 
-
-
-
-
+<br>
+<br>
+<br>
 
 # Slide 9: Results - Profitability
 
