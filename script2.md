@@ -85,54 +85,59 @@ In this run, the agent made over **0.7% profit**. That might sound small, but in
 If you look at the chart, you can actually see the learning happen. There are clear plateaus and steep rises.
 
 The flat sections are where the agent is experimenting with strategies, and the sharp rise is where it exploits the learned strategy to make a profit. We ran this simulation many times, and it consistently found a way to win.
- 
- # Slide 10: Results - Causality
- 
- This is actually the most important slide in our presentation.
- 
- The 2 bottom right charts show the composition of the population as they are evolving. The left side is just a control group without an ARL agent.
- 
- On the left, we can see that agressive and momentum traders dominated. But on the right? we can see the inverse of the left chart. Our AI actively **changed the market**, meaning It found the weak bots (the Aggressive ones), and exploited them until they went broke, forcing the entire population to shift towards arguably worse strategies like passive and random trades.
- 
- The interaction was so strong sometimes that the agent effectively 'broke' the efficient frontier of the market, forcing the simulation to reset the population proportions just to keep the game going. You can also see that as it changes the population, the random population seems like its dominating. It's not, this happens because the agent can't effectively control the random popluation. This proves the causal link: The AI acts, the market bleeds, the market evolves. The blank lines in the dependency plot represent moments of equilibrium where the AI was satisfied with the market state it had created.
+
+# Slide 10: Results - Causality
+
+This is actually the most important slide in our presentation.
+
+The 2 bottom charts show the composition of the population as they are evolving. The left side is just a control group without an ARL agent.
+
+On the left, we can see that agressive and momentum traders dominated. But on the right? we can see the inverse of the left chart. Our AI actively **changed the market**, meaning It found the weak bots (the Aggressive ones), and exploited them until they went broke, forcing the entire population to shift towards arguably worse strategies like passive and random trades.
+
+The agent's influence was sometimes so strong that it pushed the market dynamics past their normal operating range just to keep the game going. As these resets happen, it looks like the random population is dominating, but its not. This effect appears because the agen't cant directly control that population.
+
+The top right graph is dependency of the ARL agent on the egt population. There are gaps in it because the ARL agent isnt actively trying to change anything.
 
 # Slide 11: Results - Strategy
 
-What was the winning strategy?
-The top chart shows what prices the agent chose. See that tall peak? That's the **Sweet Spot**. It didn't just pick random numbers. It found one specific spread that balanced "making money" with "actually getting a trade done."
-The bottom chart shows its behavior over time. The gray line is the "Learning Rate." It starts high—trying crazy things—and drops to zero as it becomes an expert.
-But look at the orange spikes. Those are moments when the market crashed. What did the AI do? It panicked—in a smart way. It widened its spreads massively to protect itself. It learned to put up a shield when things got dangerous.
+The top chart shows the frequency of the spreads the agent chose. The tall peaks are the ideal spreads for its learned strategy. It didn't just pick random numbers. It found specific spreads that benefitted it the most
+
+The bottom chart shows its behavior over time. The gray line is the "Learning Rate." It starts high—trying different strategies and drops to zero as it becomes an better at trading.
+
+Now take a look at the red spikes. Those are moments when the market crashed. In response, the AI kind of panicked in a smart way. It widened its spreads massively to protect itself.
 
 ## Slide 12: Results - Methodology
 
-We had to check: Was this just luck?
-The chart on the left says "No." It shows thousands of small, boring wins. We aren't winning the lottery; we are grinding out a profit, penny by penny.
-The chart on the right is my favorite. Look at that bright center line. That is the Agent's inventory interacting with the market. It stays perfectly flat at zero.
-We never told the computer "Don't hold stock." It learned that rule by itself. It realized, "Holding stock is dangerous. I should sell as soon as I buy." Ideally, it wants to end the day with zero shares and a pile of cash. That is the definition of **Market Making**.
-If it does take a loss (that dip you see), it doesn't get angry. It doesn't double down. It just calmly works its way back to zero.
- 
- ## Slide 13: Novelty
- 
- So, how are we different?
- We looked at all the other research out there.
- Some people put AI in a static market.
- Some people used evolution, but no deep learning.
- Some people used multiple agents, but they didn't really fight each other.
- We are the first to combine all three: **Deep Learning**, **Evolution**, and a real **Limit Order Book**.
- Unlike a backtest, where you just replay history, our simulation mimics the real world: If you start winning, the market will adapt to try and crush you.
- 
- ## Slide 14: Bias and Future Work
- 
- We have to be honest about what we missed.
- First, our AI might just be memorizing this specific dataset.
- Second, our neural network is pretty simple. It's a small brain.
- For our next version, we want to give it a "Memory" using something called an **RNN**. This would let it remember patterns from 10 minutes ago, not just 1 second ago.
- We also want to upgrade the enemy. Instead of fighting simple bots, imagine if it had to fight *other* AI agents. An **Arms Race**. Two supercomputers battling for the same penny. That is where we want to go next.
- 
- ## Slide 15: Conclusion
- 
- To wrap up:
- We proved that a Neural Network can survive in a hostile environment.
- It didn't just memorize prices. It learned complex human behaviors—like **Risk Management** and **Strategy**—completely from scratch.
- Our biggest takeaway is this: If you want to build an AI that works in the real world, don't train it in a vacuum. Train it in a war zone.
- Thank you for listening.
+now lets look at these charts
+The chart on top shows us returns per step, and we can clearly see how this is more skewed towards the positive. We are making a big profit by consistently making smaller profits.
+
+The bottom graphs shows the inventory of the agent. The white line is the rolling average while the translucent white line is the true inventory at each time step. The agent learned to minimize its net position at near 0 to avoid directional exposure. this basically means that when the stock crashes, its capital is preserved because it isn't holding much of that stock.
+
+## Slide 13: Novelty
+
+Now, how are we different from other research out there.
+We did some searching and found a few main points of interest in all the research out there.
+Some people put AI in a static market.
+Some people used evolution, but no deep learning.
+Some people used multiple agents, but they didn't really interact with each other in any meaningful way.
+
+We are the first to combine all three: **Deep Learning**, **Evolution**, and a dynamic market.
+Unlike backtesting, where you just replay history, our simulation mimics the real world: If you start winning, the market will adapt to try and work against you.
+
+## Slide 14: Bias and Future Work
+
+First, we need to make a distinction between overfitting and optimization. We tried our best to diversify our data sets but ultimately it was only a few data sets. We can't know for sure if our hyperparameters are optimizing the bot or letting it overfit to our limited range of data sets.
+
+Second, our neural network is pretty simple. It's a small brain.
+For our next iteration, we want to give it a "Memory" using something called an **RNN**, which would let it remember patterns from longer in the past.
+
+We also want to upgrade the enemy. Instead of fighting simple evolutionary bots, imagine if we pitted it against another ARL agent. I think that would be interesting to see.
+
+## Slide 15: Conclusion
+
+To wrap up:
+We proved that a Neural Network can survive in an adversarial environment.
+
+It didn't just memorize prices. It learned complex human behaviors—like risk control, inventory management, and adaptive strategies completely from scratch.
+
+Thank you for listening.
