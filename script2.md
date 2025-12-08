@@ -74,22 +74,27 @@ So, here is what a single moment in the simulation looks like:
 <br>
 <br>
 <br>
+<br>
+<br>
 
 # Slide 9: Results - Profitability
 
 Let's look at the numbers.
 In this run, the agent made over **0.7% profit**. That might sound small, but in high-frequency trading, that is a solid number.
-If you look at the chart, you can actually see the learning happen. There are clear plateaus and steep rises. The flat sections are where the agent is experimenting with strategies, and the sharp rise is where it exploits teh learned strategy to make a profit. We ran this simulation many times, and it consistently found a way to win.
+
+If you look at the chart, you can actually see the learning happen. There are clear plateaus and steep rises.
+
+The flat sections are where the agent is experimenting with strategies, and the sharp rise is where it exploits the learned strategy to make a profit. We ran this simulation many times, and it consistently found a way to win.
  
  # Slide 10: Results - Causality
  
  This is actually the most important slide in our presentation.
  
- The bottom right heatmap shows the population of bots evolving. The left side is just a random control group.
+ The 2 bottom right charts show the composition of the population as they are evolving. The left side is just a control group without an ARL agent.
  
- On the left, nothing happens. But on the right? Look at the colors shifting. Our AI actively **changed the market**. It found the weak bots (the Aggressive ones), exploited them until they went broke, and forced the entire population to shift towards safer strategies.
+ On the left, we can see that agressive and momentum traders dominated. But on the right? we can see the inverse of the left chart. Our AI actively **changed the market**, meaning It found the weak bots (the Aggressive ones), and exploited them until they went broke, forcing the entire population to shift towards arguably worse strategies like passive and random trades.
  
- The interaction was so strong that at times, the agent effectively 'broke' the efficient frontier of the market, forcing the simulation to reset the population proportions just to keep the game going. You can also see that as it changes the population, the random population seems like its dominating. It's not, this happens because the agent can't effectively control the random popluation. This proves the causal link: The AI acts, the market bleeds, the market evolves. The blank lines in the dependency plot represent moments of equilibrium where the AI was satisfied with the market state it had created.
+ The interaction was so strong sometimes that the agent effectively 'broke' the efficient frontier of the market, forcing the simulation to reset the population proportions just to keep the game going. You can also see that as it changes the population, the random population seems like its dominating. It's not, this happens because the agent can't effectively control the random popluation. This proves the causal link: The AI acts, the market bleeds, the market evolves. The blank lines in the dependency plot represent moments of equilibrium where the AI was satisfied with the market state it had created.
 
 # Slide 11: Results - Strategy
 
